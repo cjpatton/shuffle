@@ -1,0 +1,86 @@
+% Security of mixnets with a cascade topology.
+
+\documentclass[letter]{article}
+\usepackage{color,soul}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=4cm]{geometry}
+\usepackage{graphics}
+\usepackage[toc,page]{appendix}
+\usepackage[font={small}]{caption}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{parskip}
+\usepackage{framed}
+\usepackage{multicol}
+
+\hypersetup{
+    colorlinks,%
+    citecolor=black,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=black
+}
+
+\def\dashuline{\bgroup
+  \ifdim\ULdepth=\maxdimen  % Set depth based on font, if not set already
+	  \settodepth\ULdepth{(j}\advance\ULdepth.4pt\fi
+  \markoverwith{\kern.15em
+	\vtop{\kern\ULdepth \hrule width .3em}%
+	\kern.15em}\ULon}
+
+\newcounter{foot}
+\setcounter{foot}{1}
+\setlength\parindent{2em}
+
+%%%%% Macros. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\date{\today}
+\title{Verifying a shuffle in zero-knowledge}
+  \author{Chris Patton}
+
+\setcounter{tocdepth}{2}
+
+\renewcommand{\cal}[1]{\mathcal{#1}}
+
+%%%%% Content. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+  \maketitle
+
+A mixnet (sometimes called a ``mix-network'') is a service designed to facilitate anonymous
+communications over the internet \cite{chaum81}. Each of a set of users $\cal{Q} = \{P_1, \dots, P_n\}$
+wish to send a message to a user in $\cal{Q}$. Each encrypts their message $M$ and
+the identity of the intended recipient $P_i$ under the public key of the mixnet server
+(heereafter referred to as the ``mix'') and transmits the ciphertext.
+The mix server waits until it receives $m \le n$ ciphertexts from $m$ distinct users.
+It then decrypts each message and destination pair under its secret key and transmits
+each message to its intended destination. Crucially, the mix transmits the messages in a
+random order so as to hide the correspondence between senders and recipients.
+As long as the mix is trusted and the user's ciphertexts are faithfully
+transmitted to the mix, this simple approach suffices to preserve anonymity of its
+participants.
+
+However, the trust model here is rather strong. For example, the mix could send a
+fake message on behalf of one of the senders, or redirect it to a different recipient.
+We consider the problem of publically verifying that the outputs are indeed a permutation
+of the inputs. Moreover, we require that the correspondence not be revealed. Andrew Neff
+describes in \cite{neff01} a method for doing just that.
+
+For this project, I will formulate the problem, present Neff's solution, and describe
+its security properties. I will also implement the shuffle in the Go programming language.
+
+
+
+
+\begin{thebibliography}{99}
+
+  \bibitem{chaum81} David Chaum, 1981. ``Untraceable electronic mail, return addresses, and digital pseudonyms.''
+    {\tt http://freehaven.net/anonbib/cache/chaum-mix.pdf}
+  \bibitem{neff01} C. Andrew Neff, 2001. ``A verifiable secret shuffle and its application to e-voting.'' {\tt http://freehaven.net/anonbib/cache/shuffle:ccs01.pdf}
+
+\end{thebibliography}
+
+\end{document}
