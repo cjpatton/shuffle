@@ -80,18 +80,53 @@ func TestNewKeyParametersFromString(t *testing.T) {
 
 func TestGenerateKeys(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
-	sk, pk := GenerateKeys(params)
+	pk, sk := GenerateKeys(params)
 	if sk == nil {
-		t.Fatal("sk, pk := GenerateKeys(params); sk = nil")
+		t.Fatal("pk, sk := GenerateKeys(params); sk = nil")
 	}
 	if pk == nil {
-		t.Fatal("sk, pk := GenerateKeys(params); pk = nil")
+		t.Fatal("pk, sk := GenerateKeys(params); pk = nil")
 	}
-	t.Log("secret key: %s", sk.X)
-	t.Log("public key: %s", pk.Y)
+	t.Log("secret key:", sk.X)
+	t.Log("public key:", pk.Y)
+	if pk.P.Cmp(sk.P) != 0 {
+		t.Fatal("pk, sk := GenerateKeys(params); pk.P != sk.P")
+	}
+	if pk.G.Cmp(sk.G) != 0 {
+		t.Fatal("pk, sk := GenerateKeys(params); pk.G != sk.G")
+	}
+	if pk.Q.Cmp(sk.Q) != 0 {
+		t.Fatal("pk, sk := GenerateKeys(params); pk.Q != sk.Q")
+	}
 	Y := new(big.Int)
 	Y.Exp(params.G, sk.X, params.P)
 	if pk.Y.Cmp(Y) != 0 {
-		t.Fatal("sk, pk := GenerateKeys(params); G^X != Y")
+		t.Fatal("pk, sk := GenerateKeys(params); params.G^sk.X != pk.Y")
+	}
+}
+
+func TestEncryptDecrypt(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+	pk, sk := GenerateKeys(params)
+
+	M := new(big.Int)
+	M.SetBytes([]byte("Hello, world!"))
+	R, C := Encrypt(M, pk)
+	if R == nil {
+		t.Fatal("R, C := Encrypt(M, pk); R = nil")
+	}
+	if C == nil {
+		t.Fatal("R, C := Encrypt(M, pk); C = nil")
+	}
+
+	t.Log("plaintext:", M)
+	t.Log("ciphertext:")
+	t.Log("R:", R)
+	t.Log("C:", C)
+
+	P := Decrypt(R, C, sk)
+	t.Log("decrypted plaintext:", P)
+	if M.Cmp(P) != 0 {
+		t.Fatal("P := Decrypt(R, C); P != M")
 	}
 }

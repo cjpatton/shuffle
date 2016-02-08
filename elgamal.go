@@ -63,39 +63,74 @@ func NewKeyParametersFromStrings(p, g, q string) *KeyParameters {
 // SecretKey stores the secret key X \in [1..Q-1] for Diffie_hellman or ElGamal.
 type SecretKey struct {
 	KeyParameters
-	X *big.Int
+	qMinusX *big.Int
+	X       *big.Int
 }
 
 // PublicKey stores the public key Y = G^X for Diffie-Hellman or ElGamal.
 type PublicKey struct {
 	KeyParameters
-	Y *big.Int
+	qMinusOne, one *big.Int
+	Y              *big.Int
 }
 
 // GenerateKeys chooses a random exponent and returns a secret/public key pair.
-func GenerateKeys(params *KeyParameters) (sk *SecretKey, pk *PublicKey) {
-	skMax := new(big.Int)
-	one := new(big.Int)
-	one.SetUint64(1)
-	skMax.Set(params.Q)
-	skMax.Sub(skMax, one)
-
+func GenerateKeys(params *KeyParameters) (pk *PublicKey, sk *SecretKey) {
 	var err error
 	sk = new(SecretKey)
+	pk = new(PublicKey)
+	pk.one = new(big.Int)
+	pk.one.SetUint64(1)
+	pk.qMinusOne = new(big.Int)
+	pk.qMinusOne.Sub(params.Q, pk.one)
+
+	// Choose a random secret key X.
 	sk.P = params.P
 	sk.G = params.G
 	sk.Q = params.Q
-	// Choose a random X in [0,Q-1).
-	if sk.X, err = rand.Int(rand.Reader, skMax); err != nil {
+	// Choose a random exponent in [0,Q-1).
+	if sk.X, err = rand.Int(rand.Reader, pk.qMinusOne); err != nil {
 		return nil, nil
 	}
-	// Add 1 so that X is in [1,Q-1].
-	sk.X.Add(sk.X, one)
-	pk = new(PublicKey)
+	// Add 1 so that the exponent is in [1,Q-1].
+	sk.X.Add(sk.X, pk.one)
+	sk.qMinusX = new(big.Int)
+	sk.qMinusX.Sub(params.Q, sk.X)
+
+	// Compute Y = G^X mod P.
 	pk.P = params.P
 	pk.G = params.G
 	pk.Q = params.Q
 	pk.Y = new(big.Int)
 	pk.Y.Exp(params.G, sk.X, params.P)
+	return
+}
+
+func Encrypt(M *big.Int, pk *PublicKey) (R *big.Int, C *big.Int) {
+	var err error
+	R = new(big.Int)
+	C = new(big.Int)
+
+	// Choose a random exponent in [0,Q-1).
+	if R, err = rand.Int(rand.Reader, pk.qMinusOne); err != nil {
+		return nil, nil
+	}
+	// Add 1 so that exponent is in [1,Q-1].
+	R.Add(R, pk.one)
+
+	// Compute shared secret.
+	C.Exp(pk.Y, R, pk.P)
+	C.Mul(M, C)
+	C.Mod(C, pk.P)
+
+	R.Exp(pk.G, R, pk.P)
+	return
+}
+
+func Decrypt(R, C *big.Int, sk *SecretKey) (M *big.Int) {
+	M = new(big.Int)
+	M.Exp(R, sk.qMinusX, sk.P)
+	M.Mul(M, C)
+	M.Mod(M, sk.P)
 	return
 }
