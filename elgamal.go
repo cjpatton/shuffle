@@ -30,6 +30,7 @@ package shuffle
 
 import (
 	"crypto/rand"
+	"errors"
 	"math/big"
 )
 
@@ -39,6 +40,10 @@ import (
 // order Q.
 type KeyParameters struct {
 	P, G, Q *big.Int
+}
+
+func (params *KeyParameters) MaxMsgBytes() int {
+	return (params.P.BitLen() / 8) - 1
 }
 
 // NewKeyParametersFromStrings creates a KeyParamters object from strings
@@ -75,7 +80,7 @@ type PublicKey struct {
 }
 
 // GenerateKeys chooses a random exponent and returns a secret/public key pair.
-func GenerateKeys(params *KeyParameters) (pk *PublicKey, sk *SecretKey) {
+func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 	var err error
 	sk = new(SecretKey)
 	pk = new(PublicKey)
@@ -106,31 +111,64 @@ func GenerateKeys(params *KeyParameters) (pk *PublicKey, sk *SecretKey) {
 	return
 }
 
-func Encrypt(M *big.Int, pk *PublicKey) (R *big.Int, C *big.Int) {
+// Encrypt takes as input a plaintext (presumably a member of the group <G>)
+// and outputs an ElGamal ciphertext.
+func (pk *PublicKey) Encrypt(M *big.Int) (R *big.Int, C *big.Int) {
 	var err error
 	R = new(big.Int)
 	C = new(big.Int)
 
-	// Choose a random exponent in [0,Q-1).
+	// Choose a random exponent in [1,Q-1].
 	if R, err = rand.Int(rand.Reader, pk.qMinusOne); err != nil {
 		return nil, nil
 	}
-	// Add 1 so that exponent is in [1,Q-1].
 	R.Add(R, pk.one)
 
-	// Compute shared secret.
 	C.Exp(pk.Y, R, pk.P)
 	C.Mul(M, C)
 	C.Mod(C, pk.P)
-
 	R.Exp(pk.G, R, pk.P)
 	return
 }
 
-func Decrypt(R, C *big.Int, sk *SecretKey) (M *big.Int) {
+// Decrypt takes as input an ElGamal ciphertext (presumably a tuple over <G>)
+// and outputs the corresponding plaintext.
+func (sk *SecretKey) Decrypt(R, C *big.Int) (M *big.Int) {
 	M = new(big.Int)
 	M.Exp(R, sk.qMinusX, sk.P)
 	M.Mul(M, C)
 	M.Mod(M, sk.P)
 	return
+}
+
+// Encode takes as input a string and outputs the corresponding element of the
+// MODP group.
+func (params *KeyParameters) Encode(msg []byte) (*big.Int, error) {
+	M := new(big.Int)
+
+	paddedMsg := make([]byte, params.MaxMsgBytes())
+	if len(msg) >= len(paddedMsg) {
+		return nil, errors.New("message too big.")
+	}
+
+	bytes := copy(paddedMsg, msg)
+	paddedMsg[bytes] = 0x10
+
+	M.SetBytes(paddedMsg)
+	return M, nil
+}
+
+// Decode take as input an element of the MODP group and outputs the
+// corresponding message.
+func (params *KeyParameters) Decode(M *big.Int) ([]byte, error) {
+
+	paddedMsg := M.Bytes()
+	var i int
+	for i = len(paddedMsg) - 1; i > 0 && paddedMsg[i] == 0x00; i-- {
+	}
+
+	msg := make([]byte, i)
+	copy(msg, paddedMsg)
+
+	return msg, nil
 }

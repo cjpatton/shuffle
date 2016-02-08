@@ -29,6 +29,7 @@
 package shuffle
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 )
@@ -80,7 +81,7 @@ func TestNewKeyParametersFromString(t *testing.T) {
 
 func TestGenerateKeys(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
-	pk, sk := GenerateKeys(params)
+	pk, sk := params.GenerateKeys()
 	if sk == nil {
 		t.Fatal("pk, sk := GenerateKeys(params); sk = nil")
 	}
@@ -107,11 +108,12 @@ func TestGenerateKeys(t *testing.T) {
 
 func TestEncryptDecrypt(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
-	pk, sk := GenerateKeys(params)
+	pk, sk := params.GenerateKeys()
 
 	M := new(big.Int)
 	M.SetBytes([]byte("Hello, world!"))
-	R, C := Encrypt(M, pk)
+
+	R, C := pk.Encrypt(M)
 	if R == nil {
 		t.Fatal("R, C := Encrypt(M, pk); R = nil")
 	}
@@ -124,9 +126,38 @@ func TestEncryptDecrypt(t *testing.T) {
 	t.Log("R:", R)
 	t.Log("C:", C)
 
-	P := Decrypt(R, C, sk)
+	P := sk.Decrypt(R, C)
 	t.Log("decrypted plaintext:", P)
 	if M.Cmp(P) != 0 {
 		t.Fatal("P := Decrypt(R, C); P != M")
+	}
+}
+
+func TestEncodeDecode(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	msg := []byte("hello, world!")
+	M, err := params.Encode(msg)
+	if err != nil {
+		t.Fatal("M, err := params.Encode(msg);", err)
+	}
+
+	if msg1, err := params.Decode(M); err != nil {
+		t.Fatal("msg1, err := params.Decode(M);", err)
+	} else if !bytes.Equal(msg1, msg) {
+		t.Fatal("msg1, err := params.Decode(M); msg != msg1")
+	}
+}
+
+func TestEncodeBadMsg(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	msg := make([]byte, params.MaxMsgBytes()+1)
+	for i := 0; i < len(msg); i++ {
+		msg[i] = 0x41
+	}
+
+	if _, err := params.Encode(msg); err == nil {
+		t.Fatal("_, err := params.Decode(M); err = nil, expect error")
 	}
 }
