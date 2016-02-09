@@ -36,14 +36,16 @@ import (
 
 // KeyParameters stores the public parameters for Diffie-Hellman or ElGamal
 // encryption. These are a generator G and primes P and Q such that Q divides
-// (P-1), and G^Q is congruent to 1 mod P; that is, <G> is a cyclic subgroup of
+// (P-1) and G^Q is congruent to 1 mod P; that is, <G> is a cyclic subgroup of
 // Z/p of order Q.
 type KeyParameters struct {
 	P, G, Q *big.Int
 }
 
+// MaxMsgBytes returns the maximum number of message that may be encrypted
+// under the modulus P.
 func (params *KeyParameters) MaxMsgBytes() int {
-	return (params.P.BitLen() / 8) - 1
+	return (params.P.BitLen() / 8) - 4
 }
 
 // NewKeyParametersFromStrings creates a KeyParamters object from strings
@@ -132,7 +134,7 @@ func (pk *PublicKey) Encrypt(M *big.Int) (R *big.Int, C *big.Int) {
 }
 
 // Decrypt takes as input an ElGamal ciphertext (presumably a tuple over Z/p)
-// and outputs the corresponding plaintext.
+// and outputs the corresponding plaintext element of Z/p.
 func (sk *SecretKey) Decrypt(R, C *big.Int) (M *big.Int) {
 	M = new(big.Int)
 	M.Exp(R, sk.qMinusX, sk.P)
@@ -141,26 +143,33 @@ func (sk *SecretKey) Decrypt(R, C *big.Int) (M *big.Int) {
 	return
 }
 
-// Encode takes as input a string and outputs the corresponding element of Z/p.
+// Encode takes as input a slice of bytes and outputs the corresponding
+// element of Z/p.
 func (params *KeyParameters) Encode(msg []byte) (*big.Int, error) {
 	M := new(big.Int)
-	paddedMsg := make([]byte, params.MaxMsgBytes())
-	if len(msg) >= len(paddedMsg) {
-		return nil, errors.New("message too big.")
+	maxMsgBytes := params.MaxMsgBytes()
+	if len(msg) > maxMsgBytes {
+		return nil, errors.New("message too big")
 	}
-	bytes := copy(paddedMsg, msg)
-	paddedMsg[bytes] = 0x10
+	paddedMsg := make([]byte, maxMsgBytes+2)
+	paddedMsg[0] = 0xFF
+	bytes := copy(paddedMsg[1:], msg)
+	paddedMsg[bytes+1] = 0xFF
 	M.SetBytes(paddedMsg)
 	return M, nil
 }
 
-// Decode take as input an element of Z/p and outputs the corresponding message.
+// Decode takes as input an element of Z/p and outputs the corresponding
+// message.
 func (params *KeyParameters) Decode(M *big.Int) ([]byte, error) {
 	paddedMsg := M.Bytes()
-	var i int
-	for i = len(paddedMsg) - 1; i > 0 && paddedMsg[i] == 0x00; i-- {
+	i := len(paddedMsg) - 1
+	for ; i >= 0; i-- {
+		if paddedMsg[i] != 0x00 {
+			break
+		}
 	}
-	msg := make([]byte, i)
-	copy(msg, paddedMsg)
+	msg := make([]byte, i-1)
+	copy(msg, paddedMsg[1:])
 	return msg, nil
 }

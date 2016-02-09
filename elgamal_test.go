@@ -30,14 +30,17 @@ package shuffle
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 )
 
 // Public parameters for testing encryption keys. This is the NIST 2048-bit
-// MODP group with a 256-bit prime order subgroup from RFC5114. One should
-// generate his/her own parameters in light of the logjam attack. (See
-// https://weakdh.org/imperfect-forward-secrecy-ccs15.pdf for details.)
+// MODP group with a 256-bit prime order subgroup from RFC5114. These values are
+// encoded as hexadecimal strings beginning with the most significant bit.
+
+// The modulus P defining the multiplicative group Z/p.
 const testP = "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F2" +
 	"5D2CEED4435E3B00E00DF8F1D61957D4FAF7DF4561B2AA30" +
 	"16C3D91134096FAA3BF4296D830E9A7C209E0C6497517ABD" +
@@ -50,6 +53,7 @@ const testP = "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F2" +
 	"75F26375D7014103A4B54330C198AF126116D2276E11715F" +
 	"693877FAD7EF09CADB094AE91E1A1597"
 
+// The generator G \in Z/p of a cyclic subgroup of Z/p.
 const testG = "3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF2054" +
 	"07F4793A1A0BA12510DBC15077BE463FFF4FED4AAC0BB555" +
 	"BE3A6C1B0C6B47B1BC3773BF7E8C6F62901228F8C28CBB18" +
@@ -62,9 +66,11 @@ const testG = "3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF2054" +
 	"184B523D1DB246C32F63078490F00EF8D647D148D4795451" +
 	"5E2327CFEF98C582664B4C0F6CC41659"
 
+// The order Q of <G>. (Hence Q | (P-1).)
 const testQ = "8CF83642A709A097B447997640129DA299B1A47D1EB3750B" +
 	"A308B0FE64F5FBD3"
 
+// Test loading key parameter stored as hexadecimal strings.
 func TestNewKeyParametersFromString(t *testing.T) {
 	var ntrials int = 10
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
@@ -79,6 +85,7 @@ func TestNewKeyParametersFromString(t *testing.T) {
 	}
 }
 
+// Test key generation.
 func TestGenerateKeys(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 	pk, sk := params.GenerateKeys()
@@ -106,6 +113,7 @@ func TestGenerateKeys(t *testing.T) {
 	}
 }
 
+// Test encryption and decryption of a fixed plaintext.
 func TestEncryptDecrypt(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 	pk, sk := params.GenerateKeys()
@@ -133,31 +141,38 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 }
 
+// Test encoding and decoding strings of various lengths.
 func TestEncodeDecode(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 
-	msg := []byte("hello, world!")
-	M, err := params.Encode(msg)
-	if err != nil {
-		t.Fatal("M, err := params.Encode(msg);", err)
+	helloMsg := []byte("hello, world!")
+	if err := testEncodeDecode(helloMsg, params); err != nil {
+		t.Error("err := testEncodeDecode(\"hello, world!\"); err:", err)
+	}
+	emptyMsg := make([]byte, 0)
+	if err := testEncodeDecode(emptyMsg, params); err != nil {
+		t.Error("err := testEncodeDecode(emptyMsg); err:", err)
+	}
+	maxLengthMsg := make([]byte, params.MaxMsgBytes())
+	if err := testEncodeDecode(maxLengthMsg, params); err != nil {
+		t.Error("err := testEncodeDecode(maxLengthMsg); err:", err)
 	}
 
-	if msg1, err := params.Decode(M); err != nil {
-		t.Fatal("msg1, err := params.Decode(M);", err)
-	} else if !bytes.Equal(msg1, msg) {
-		t.Fatal("msg1, err := params.Decode(M); msg != msg1")
+	badMsg := make([]byte, params.MaxMsgBytes()+1)
+	if err := testEncodeDecode(badMsg, params); err == nil {
+		t.Error("err := testEncodeDecode(badMsg); err = nil: expected error")
 	}
 }
 
-func TestEncodeBadMsg(t *testing.T) {
-	params := NewKeyParametersFromStrings(testP, testG, testQ)
-
-	msg := make([]byte, params.MaxMsgBytes()+1)
-	for i := 0; i < len(msg); i++ {
-		msg[i] = 0x41
+func testEncodeDecode(msg []byte, params *KeyParameters) error {
+	M, err := params.Encode(msg)
+	if err != nil {
+		return err
 	}
-
-	if _, err := params.Encode(msg); err == nil {
-		t.Fatal("_, err := params.Decode(M); err = nil, expect error")
+	if msg1, err := params.Decode(M); err != nil {
+		return err
+	} else if !bytes.Equal(msg1, msg) {
+		return errors.New(fmt.Sprintf("mismatch: %v vs %v encoding: %v", msg, msg1, M.Bytes()))
 	}
+	return nil
 }
