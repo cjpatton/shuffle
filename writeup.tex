@@ -50,36 +50,102 @@
 
   \maketitle
 
-A mixnet (sometimes called a ``mix-network'') is a service designed to facilitate anonymous
-communications over the internet \cite{chaum81}. Each of a set of users $\cal{Q} = \{P_1, \dots, P_n\}$
-wish to send a message to a user in $\cal{Q}$. Each encrypts their message $M$ and
-the identity of the intended recipient $P_i$ under the public key of the mixnet server
-(heereafter referred to as the ``mix'') and transmits the ciphertext.
-The mix server waits until it receives $m \le n$ ciphertexts from $m$ distinct users.
-It then decrypts each message and destination pair under its secret key and transmits
-each message to its intended destination. Crucially, the mix transmits the messages in a
-random order so as to hide the correspondence between senders and recipients.
-As long as the mix is trusted and the user's ciphertexts are faithfully
-transmitted to the mix, this simple approach suffices to preserve anonymity of its
+\section{Progress report}
+I've completed the intro for the write up, outlined the remaining sections, and
+found all the references I'll need. I've worked through most of the protocol and
+am ready to proceed with implementation. So far, I've coded the preliminaries:
+ElGamal encryption and batch decryption and shuffling. It was necessary to code
+ElGamal from scratch, because the library available for Go rolls encoding and
+encryption into one function; in order to do Neff's proof, I need to be able to
+handle group elements. Code and test cases can be found at github.com/cjpatton/shuffle.
+
+\section{Introduction}
+
+A mixnet (sometimes called a ``mix-network'') is a service designed to
+facilitate anonymous communications over the internet \cite{chaum81}. Each of a
+set of users $\cal{Q} = \{P_1, \dots, P_n\}$ wish to send a message to a user in
+$\cal{Q}$. Each encrypts their message $M$ and the identity of the intended
+recipient $P_i$ under the public key of the mixnet server (heereafter referred
+to as the ``mix'') and transmits the ciphertext.  The mix server waits until it
+receives $m \le n$ ciphertexts from $m$ distinct users.  It then decrypts each
+message and destination pair under its secret key and transmits each message to
+its intended destination. Crucially, the mix transmits the messages in a random
+order so as to hide the correspondence between senders and recipients.  As long
+as the mix is trusted and the user's ciphertexts are faithfully transmitted to
+the mix, this simple approach suffices to preserve anonymity of its
 participants.
 
-However, the trust model here is rather strong. For example, the mix could send a
-fake message on behalf of one of the senders, or redirect it to a different recipient.
-We consider the problem of publically verifying that the outputs are indeed a permutation
-of the inputs. Moreover, we require that the correspondence not be revealed. Andrew Neff
-describes in \cite{neff01} a method for doing just that.
+Normally we think of the mixnet being composed of a cascade of mix servers, each
+decrypting, shuffling, then transmitting to the next mix in the cascade until
+finally the last server outputs the users' messages. This is meant to distribute
+trust so that as long as the messages pass through at least one honest mix,
+anonymity is achieved. Still, the trust model here is rather strong. For
+example, the mix could send a fake message on behalf of one of the senders, or
+redirect it to a different recipient.  We consider the problem of publically
+verifying that the outputs are indeed a permutation of the inputs. Moreover, we
+require that the correspondence not be revealed. Andrew Neff describes in
+\cite{neff01} a method for proving a shuffle in zero-knowledge.
 
-For this project, I will formulate the problem, present Neff's solution, and describe
-its security properties. I will also implement the shuffle in the Go programming language.
+Neff's solution is based on the ElGamal public key encryption scheme, which is
+known to be semantically secure assuming the discrete log problem (decisional
+Diffie-Hellman, or DDH) is hard \cite{elgamal84}. Based on this assumption, Neff
+proves his protocol achieves a property known as honest verifier zero-knowledge
+(HVZK) \cite{goldreich}. Informally speaking, this means that as long as the verifier
+faithfully executes the protocol, the mix can prove the outputs are a
+permutation of the inputs without revealing the permutation.
 
+I formulate and define security for the problem and present Neff's protocol.
+For simplicity, I limit the discussion to a mixnet with a single mix server. In
+this scenario, users encrypt their messages under the public key of the mix. The
+mix waits until it receives a full batch of ciphertexts, decrypts them under its
+private key, and shuffles the output. In section~\ref{section:prelim}, I specify
+ElGamal encryption, describe the DDH assumption, and sketch the HVZK notion. In
+section~\ref{section:neff-shuffle}, I present the protocol and sketch its
+security. I implement the general $k$-shuffle as described in this section in
+the Go programming language.\footnote{Freely available at {\it
+github.com/cjpatton/shuffle}}.
 
+\section{Preliminaries} \label{section:prelim}
+
+Notation.
+
+\subsection{ElGamal encryption}
+
+\subsection{Decisional Diffie-Hellman}
+
+\subsection{Honest verifier zero-knowledge}
+
+\section{The Neff shuffle} \label{section:neff-shuffle}
+
+Describe what the mix does with specified syntax.
+
+\subsection{The basic protocol and its security}
+Not useful yet ...
+
+\subsection{Simple $k$-shuffle}
+Not useful yet ...
+
+\subsection{General $k$-shuffle}
+This is what we actually implement.
 
 
 \begin{thebibliography}{99}
 
   \bibitem{chaum81} David Chaum, 1981. ``Untraceable electronic mail, return addresses, and digital pseudonyms.''
     {\tt http://freehaven.net/anonbib/cache/chaum-mix.pdf}
+
+  \bibitem{elgamal84} Taher Elgamal, ``A public key cryptosystem and a signature
+    scheme based on discrete logarithms.'' Appeared in \textit{CRYPTO'84.}
+
+  \bibitem{cp92}  D. Chaum and T.P. Pedersen. ``Wallet databases with
+    observers.'' Appeared in \textit{CRYPTO'92.}
+
+  \bibitem{goldreich} Oded Goldreich, 2001. \textit{Foundations of Cryptography.}
+
   \bibitem{neff01} C. Andrew Neff, 2001. ``A verifiable secret shuffle and its application to e-voting.'' {\tt http://freehaven.net/anonbib/cache/shuffle:ccs01.pdf}
+
+  \bibitem{ai03} Masayuki Abe and Hideki Imai, 2003. ``Flaws in some robust
+    optimistic mix-nets.'' Appeared in \textit{ACISP'03.}
 
 \end{thebibliography}
 
