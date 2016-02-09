@@ -27,3 +27,54 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 package shuffle
+
+import (
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math/big"
+)
+
+// Decrypts the sequence of ElGamal ciphertexts {(R[i], C[i])}, applies the
+// specified permutation, and outputs the resulting sequence.
+func (sk *SecretKey) Shuffle(R, C []*big.Int, perm []int) ([]*big.Int, error) {
+	if len(R) != len(C) {
+		return nil, errors.New(fmt.Sprintf(
+			"sequence length mismatch: |R|=%d, |C|=%d", len(R), len(C)))
+	}
+
+	M := make([]*big.Int, len(R))
+	for i := 0; i < len(R); i++ {
+		if j := perm[i]; M[j] == nil && 0 <= j && j < len(R) {
+			M[j] = sk.Decrypt(R[i], C[i])
+		} else {
+			return nil, errors.New("parameter is not a permutation")
+		}
+	}
+	return M, nil
+}
+
+// GeneratePerm generates a pseudo-random permutation on n-vectors using the
+// Knuth (Fisher-Yates) shuffle.
+func GeneratePerm(n int) []int {
+	perm := make([]int, n)
+	for i := 0; i < n; i++ {
+		perm[i] = i
+	}
+	one := new(big.Int)
+	one.SetUint64(1)
+	max := new(big.Int)
+	max.SetUint64(uint64(n))
+	for i := n - 1; i >= 1; i-- {
+		max.Sub(max, one)
+		r, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return nil
+		}
+		j := r.Uint64()
+		perm[i] ^= perm[j]
+		perm[j] ^= perm[i]
+		perm[i] ^= perm[j]
+	}
+	return perm
+}

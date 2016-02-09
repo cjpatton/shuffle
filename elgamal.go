@@ -36,8 +36,8 @@ import (
 
 // KeyParameters stores the public parameters for Diffie-Hellman or ElGamal
 // encryption. These are a generator G and primes P and Q such that Q divides
-// (P-1), and G^Q is congruent to 1 mod P; that is, <G> is a cyclic group of
-// order Q.
+// (P-1), and G^Q is congruent to 1 mod P; that is, <G> is a cyclic subgroup of
+// Z/p of order Q.
 type KeyParameters struct {
 	P, G, Q *big.Int
 }
@@ -111,8 +111,8 @@ func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 	return
 }
 
-// Encrypt takes as input a plaintext (presumably a member of the group <G>)
-// and outputs an ElGamal ciphertext.
+// Encrypt takes as input a plaintext (presumably an element of Z/p)
+// and outputs an ElGamal ciphertext (a tuple over Z/p).
 func (pk *PublicKey) Encrypt(M *big.Int) (R *big.Int, C *big.Int) {
 	var err error
 	R = new(big.Int)
@@ -131,7 +131,7 @@ func (pk *PublicKey) Encrypt(M *big.Int) (R *big.Int, C *big.Int) {
 	return
 }
 
-// Decrypt takes as input an ElGamal ciphertext (presumably a tuple over <G>)
+// Decrypt takes as input an ElGamal ciphertext (presumably a tuple over Z/p)
 // and outputs the corresponding plaintext.
 func (sk *SecretKey) Decrypt(R, C *big.Int) (M *big.Int) {
 	M = new(big.Int)
@@ -141,34 +141,26 @@ func (sk *SecretKey) Decrypt(R, C *big.Int) (M *big.Int) {
 	return
 }
 
-// Encode takes as input a string and outputs the corresponding element of the
-// MODP group.
+// Encode takes as input a string and outputs the corresponding element of Z/p.
 func (params *KeyParameters) Encode(msg []byte) (*big.Int, error) {
 	M := new(big.Int)
-
 	paddedMsg := make([]byte, params.MaxMsgBytes())
 	if len(msg) >= len(paddedMsg) {
 		return nil, errors.New("message too big.")
 	}
-
 	bytes := copy(paddedMsg, msg)
 	paddedMsg[bytes] = 0x10
-
 	M.SetBytes(paddedMsg)
 	return M, nil
 }
 
-// Decode take as input an element of the MODP group and outputs the
-// corresponding message.
+// Decode take as input an element of Z/p and outputs the corresponding message.
 func (params *KeyParameters) Decode(M *big.Int) ([]byte, error) {
-
 	paddedMsg := M.Bytes()
 	var i int
 	for i = len(paddedMsg) - 1; i > 0 && paddedMsg[i] == 0x00; i-- {
 	}
-
 	msg := make([]byte, i)
 	copy(msg, paddedMsg)
-
 	return msg, nil
 }
