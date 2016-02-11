@@ -51,8 +51,8 @@
 \newcommand*\union{\cup}
 \newcommand*\intersect{\cap}
 \newcommand*\by{\times}
-%\newcommand{\sample}{\xleftarrow{\text{\tiny{\$}}}}
-\newcommand{\sample}{\mathrel{\leftarrow\mkern-14mu\leftarrow}}
+%\newcommand{\getsr}{\xleftarrow{\text{\tiny{\$}}}}
+\newcommand{\getsr}{\mathrel{\leftarrow\mkern-14mu\leftarrow}}
 
 % Asymptotics
 \newcommand{\negl}{\proc{negl}}
@@ -67,8 +67,15 @@
 
 \newcommand{\pk}{K}
 \newcommand{\sk}{k}
+\newcommand{\varm}{M}
+\newcommand{\varc}{C}
+\newcommand{\varr}{R}
 
 \newcommand{\advD}{D}
+
+\newcommand{\gen}{\mathcal{G}}
+\newcommand{\enc}{\mathcal{E}}
+\newcommand{\dec}{\mathcal{D}}
 
 %%%%% Title. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -129,22 +136,24 @@ private key, and shuffles the output. In section~\ref{section:prelim}, I specify
 ElGamal encryption, describe the DDH assumption, and sketch the HVZK notion. In
 section~\ref{section:neff-shuffle}, I present the protocol and sketch its
 security. I implement the general $k$-shuffle as described in this section in
-the Go programming language.\footnote{Freely available at {\it
-github.com/cjpatton/shuffle}}.
+the Go programming language.\footnote{ Freely available at {\it
+github.com/cjpatton/shuffle}.}
 
 \section{Preliminaries} \label{section:prelim}
 
-If $X$ is a finite set, let $x \sample X$ denote uniformly sampling an
+If $X$ is a finite set, let $x \getsr X$ denote uniformly sampling an
 element $x$ from the set. Let $y \gets A(x)$ denote running $A$ on input $x$ and
 assigning its output to $y$. Let $y \gets A(x; r)$ denote the execution of a
 probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
-\sample A(x)$ denote choosing $r \sample \bits^\infty$ and executing $y \gets
+\getsr A(x)$ denote choosing $r \getsr \bits^\infty$ and executing $y \gets
 A(x; r)$. Let $[i..j]$ where $i \le j$ denote the set of integers from $i$ to
 $j$ inclusive.
-Let $y \gets \brackets{P, V}(x)$ denote the execution of interactive Turing machines $P$
-and $V$ on common input $x$. When the protocol finishes, the output of $V$ is
-assigned to $y$.
-A function $\Delta(n)$ is negligible if for all positive polynomials
+Let $y \getsr \brackets{P, V}(x)$ denote the probabilistic execution of
+interactive Turing machines $P$ and $V$ on common input $x$. When the protocol
+finishes, the output of $V$ is assigned to $y$.
+$x$ is called the common input of $P$ and $V$.
+Finally a function $\Delta(n)$ is
+negligible if for all positive polynomials
 $p(\cdot)$ and sufficiently large $n$, $\Delta(n) < \frac{1}{p(n)}$.
 
 
@@ -155,36 +164,54 @@ In what follows, we assume arithmetic is performed in the modular ring $\Zmodp$.
 Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
 \Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
 \textit{public parameters}. The \textit{secret-key} is chosen uniformly from
-the set of powers of $g$ mod $p$: let $\sk \sample [1..q-1]$. Let $\pk = g^\sk$ be
-the \textit{public-key}.
-
-Encryption of $m \in \bits^*$ proceeds as follows:
-the plaintext is encoded as $M \in \Zmodp^*$. (Of course, only a subset of
-$\bits^*$ may be encoded for a fixed modulus $p$.)
-Let $r \sample [1..q-1]$,
+the set of powers of $g$ mod $p$: let $\sk \getsr [1..q-1]$. Let $\pk = g^\sk$ be
+the \textit{public-key}. Key generation is denoted $(K, k) \getsr \gen(p, q,
+g)$.
+Encryption and decryption operate on group elements.\footnote{
+Public-key encryption schemes are typically defined on bit
+strings. It is easy to messages as elements of $\Zmodp^*$, but the number of
+messages that can be encoded depends on the modulus $p$.}
+Encryption of $M \in \Zmodp^*$ proceeds as follows:
+Let $r \getsr [1..q-1]$,
 $R = g^r$,
 $S = K^r$, and
 $C = M \cdot S$.
-The ciphertext is the tuple $(R, C)$.
-Decryption of a ciphertext $(R, C) \in \Zmodp^* \by \Zmodp^*$ proceeds as follows:
+Output the tuple $(C, R)$.
+This is denoted $(C, R) \getsr \enc_K(M)$.
+Decryption of a ciphertext $(C, R) \in \Zmodp^* \by \Zmodp^*$ proceeds as follows:
 let $S = R^\sk$ and
 $M = C \cdot S^{-1}$.
-The plaintext $m$ is recovered by decoding $M$.
+Output $M$.
+This is denoted $M \gets \dec_k(C, R)$.
 
-This encryption scheme is known to be \textit{semantically secure} under the
-decisional Diffie-Hellman assumption \cite{ty98}. Informally speaking, this
+ElGamal is known to be \textit{semantically secure} under the
+decisional Diffie-Hellman assumption \cite{elgamal84,ty98}. Informally speaking, this
 means that if given $\pk$, it is infeasible for any adversary to determine
 $\sk$, then given $(C,R)$, it is infeasible for any adversary to
 learn anything meaningful about $M$ (nor $m$). As we're not
 interested in the security of ElGamal from a privacy standpoint, we won't
-formalize semantic security. However, we define the DDH assumption.
+formalize semantic security. However, we define the DDH assumption in the next
+subsection.
+
+The mixnet operates as follows:
+let $\varm_1, \ldots, \varm_n \in \Zmodp^*$ be a sequence of plaintexts.
+Let $(\varc_1, \varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by \Zmodp^*$ be a
+sequence of corresponding ElGamal ciphertexts encrypted under the public-key
+$\pk$. The mix server, who possesses the secret-key $\sk$, takes as input
+the ciphertexts and outputs a sequence $\varm_{\pi(1)}, \ldots, \varm_{\pi(n)}$
+where $\pi$ is a permutation on $[1..n]$.
+We remark that there is a natural extension of this scheme for mixnets with a
+cascade of servers, each possessing its own decryption key \cite{cm06}. Indeed,
+Camenisch and Mityagin use the Neff proof in order to verify the output of each
+mix in the cascade. If a dishonest mix is detected, the protocol is run without
+without using it.
 
 \subsection{Decisional Diffie-Hellman}
 
 Let $(p, q, g)$ be the public parameters of the ElGamal cryptosystem. The game
-the adversary $\advD$ plays is defined as follows: let $a, b, r \sample
+the adversary $\advD$ plays is defined as follows: let $a, b, r \getsr
 [1..q-1]$ and let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose
-a random bit $b \sample \bits$. On input $(A, B, Y_b)$, the adversary outputs a
+a random bit $b \getsr \bits$. On input $(A, B, Y_b)$, the adversary outputs a
 bit $b^\prime \in \bits$ and wins if $b=b^\prime$. The advantage of $\advD$ is
 defined as
 \[
@@ -196,17 +223,18 @@ function $\Delta(q)$ is negligible.
 \subsection{Honest verifier zero-knowledge}
 
 Zero-knowledge is defined in \cite{goldreich} with respect to the class of
-formal languages with interactive proof systems denoted $\class{IP}$. A language $L$ has an
+formal languages with interactive proof systems. A language $L$ has an
 interactive proof system if there exists a pair of probabilistic algorithms $(P,
 V)$ such that for all $x \in L$, $\Pr[\brackets{P, V}(x) = 1] = 1$, and for all
-$x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/2$.
+$x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/2$. The class of languages
+with interactive proof systems is denoted $\class{IP}$.
 
 Let $L \in \class{IP}$
 exhibited by $(P, V)$. We define security with respect to a game associated to
 adversary $D$, verifier $V^*$, and simulator $M^*$. Suppose that $L$ is a finite
 set\footnote{This is without loss of generality, since we
-consider polynomial-time adversaries.} and let $x \sample L$. Let $y_1 \sample
-\brackets{P, V^*}(x)$ and $y_0 \sample M^*(x)$ choose a bit $b \sample \bits$.
+consider polynomial-time adversaries.} and let $x \getsr L$. Let $y_1 \getsr
+\brackets{P, V^*}(x)$ and $y_0 \getsr M^*(x)$ choose a bit $b \getsr \bits$.
 On input $(x, y_b)$, adversary $\advD$ outputs a bit $b^\prime$ and wins if
 $b=b^\prime$. Let $k = |L|$ and define the advantage of $\advD$ as
 \[
@@ -214,7 +242,7 @@ $b=b^\prime$. Let $k = |L|$ and define the advantage of $\advD$ as
 \]
 We say that $(P, V)$ is \emph{computational zero-knowledge} (or just
 \emph{zero-knowledge}) if
-for every probabilistic polynomial-time adversary $\advD$,
+for every probabilistic polynomial-time adversary $\advD$ and
   for every probabilistic polynomial-time verifier $V^*$,
     there exists probabilistic polynomial-time simulator $M^*$ such that $\Delta(k)$ is
     negligible.
@@ -229,7 +257,22 @@ is a negligible function of $k$.
 
 \section{The Neff shuffle} \label{section:neff-shuffle}
 
-Describe what the mix does with specified syntax.
+We now give the syntax of an interactive proof system for mixnets. The prover
+$P$ (nominally the mix server) possesses the secret-key $\sk$ and the verifier $V$ possesses
+the public-key $\pk$. The common input of $P$ and $V$ is all of the messages passed through the
+mix server. The mix takes as input a sequence of ciphertexts $(\varc_1,
+\varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by \Zmodp^*$ and outputs a
+sequence of plaintexts $\varm_{1}, \ldots, \varm_{n} \in \Zmodp^*$. Let $x \in
+\bits^*$ denote the encoding of these messages. We say $x \in L$ if and only if
+there exists a bijection $\pi : [1..n] \rightarrow [1..n] $ such that for every $i \in [1..n]$,
+$\varm_{\pi(i)} = \dec_k(\varc_{i}, \varr_{i})$.
+
+A trivial proof system for $L$ is one in which the prover transmits to the
+verifier its secret-key and the verifier decrypts each of the ciphertexts. Of
+course, this completely exposes $\pi$. Our goal is to specify a proof system $(P,
+V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing the
+permutation or the secret key. A proof system that is HVZK is sufficient to
+achieve this goal, assuming the DDH problem is hard.
 
 \subsection{The basic protocol and its security}
 Not useful yet ...
@@ -259,8 +302,8 @@ This is what we actually implement.
 
   \bibitem{neff01} C. Andrew Neff, 2001. ``A verifiable secret shuffle and its application to e-voting.'' {\tt http://freehaven.net/anonbib/cache/shuffle:ccs01.pdf}
 
-  \bibitem{ai03} Masayuki Abe and Hideki Imai, 2003. ``Flaws in some robust
-    optimistic mix-nets.'' Appeared in \textit{ACISP'03.}
+  \bibitem{cm06} Jan Camenisch and Anton Mityagin, 2006. ``Mix-network with
+    stronger security.''
 
 \end{thebibliography}
 
