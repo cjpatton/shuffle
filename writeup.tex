@@ -228,6 +228,7 @@ interactive proof system if there exists a pair of probabilistic algorithms $(P,
 V)$ such that for all $x \in L$, $\Pr[\brackets{P, V}(x) = 1] = 1$, and for all
 $x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/2$. The class of languages
 with interactive proof systems is denoted $\class{IP}$.
+%TODO(cjpatton) verify in Goldreich
 
 Let $L \in \class{IP}$
 exhibited by $(P, V)$. We define security with respect to a game associated to
@@ -254,6 +255,7 @@ for every probabilistic polynomial-time adversary $\advD$,
   |\Pr[\advD(x, \brackets{P,V}(x))=1] - \Pr[\advD(x, M^*(x))=1]|
 \]
 is a negligible function of $k$.
+%TODO(cjpatton) verify in Goldreich
 
 \section{The Neff shuffle} \label{section:neff-shuffle}
 
@@ -272,15 +274,19 @@ verifier its secret-key and the verifier decrypts each of the ciphertexts. Of
 course, this completely exposes $\pi$. Our goal is to specify a proof system $(P,
 V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing the
 permutation or the secret key. A proof system that is HVZK is sufficient to
-achieve this goal, assuming the DDH problem is hard.
+achieve this goal, assuming the DDH problem is hard. Such a proof system is
+given by the general $k$-shuffle protocol defined in
+section~\ref{section:gen-k-shuffle}. It is built upon two simpler protocols,
+which we define in sections~\ref{section:ilmpp}
+and~\ref{section:simple-k-shuffle}.
 
-\subsection{The basic protocol and its security}
+\subsection{The basic protocol and its security} \label{section:ilmpp}
 Not useful yet ...
 
-\subsection{Simple $k$-shuffle}
+\subsection{Simple $k$-shuffle} \label{section:simple-k-shuffle}
 Not useful yet ...
 
-\subsection{General $k$-shuffle}
+\subsection{General $k$-shuffle} \label{section:gen-k-shuffle}
 This is what we actually implement.
 
 
