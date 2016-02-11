@@ -62,12 +62,13 @@
 
 % Misc.
 \newcommand{\brackets}[1]{\langle #1 \rangle}
-\newcommand{\view}{\proc{view}}
+\newcommand{\view}{\mathsf{view}}
+\newcommand{\class}[1]{\mathbf{#1}}
 
 \newcommand{\pk}{K}
 \newcommand{\sk}{k}
 
-\newcommand{\advA}{\mathcal{A}}
+\newcommand{\advD}{D}
 
 %%%%% Title. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -140,8 +141,12 @@ probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
 \sample A(x)$ denote choosing $r \sample \bits^\infty$ and executing $y \gets
 A(x; r)$. Let $[i..j]$ where $i \le j$ denote the set of integers from $i$ to
 $j$ inclusive.
-Finally, a function $\Delta(n)$ is negligible if for all positive polynomials
+Let $y \gets \brackets{P, V}(x)$ denote the execution of interactive Turing machines $P$
+and $V$ on common input $x$. When the protocol finishes, the output of $V$ is
+assigned to $y$.
+A function $\Delta(n)$ is negligible if for all positive polynomials
 $p(\cdot)$ and sufficiently large $n$, $\Delta(n) < \frac{1}{p(n)}$.
+
 
 \subsection{ElGamal encryption}
 
@@ -177,18 +182,50 @@ formalize semantic security. However, we define the DDH assumption.
 \subsection{Decisional Diffie-Hellman}
 
 Let $(p, q, g)$ be the public parameters of the ElGamal cryptosystem. The game
-the adversary $\advA$ plays is defined as follows: let $a, b, r \sample [1..q-1]$ and
-let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose a random bit
-$b \sample \bits$. On input $(A, B, Y_b)$, the adversary outputs a bit
-$b^\prime \in \bits$. The advantage of $\advA$ is defined as
+the adversary $\advD$ plays is defined as follows: let $a, b, r \sample
+[1..q-1]$ and let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose
+a random bit $b \sample \bits$. On input $(A, B, Y_b)$, the adversary outputs a
+bit $b^\prime \in \bits$ and wins if $b=b^\prime$. The advantage of $\advD$ is
+defined as
 \[
-  \Delta(q) = |\Pr[\advA(A, B, Y_1)=1] - \Pr[\advA(A, B, Y_0)=1]|
+  \Delta(q) = |\Pr[\advD(A, B, Y_1)=1] - \Pr[\advD(A, B, Y_0)=1]|
 \]
-The DDH assumption is that $\Delta(q)$ is negligible.
-
-
+The DDH assumption is that, for every polynomial-time adversary $\advD$, the
+function $\Delta(q)$ is negligible.
 
 \subsection{Honest verifier zero-knowledge}
+
+Zero-knowledge is defined in \cite{goldreich} with respect to the class of
+formal languages with interactive proof systems denoted $\class{IP}$. A language $L$ has an
+interactive proof system if there exists a pair of probabilistic algorithms $(P,
+V)$ such that for all $x \in L$, $\Pr[\brackets{P, V}(x) = 1] = 1$, and for all
+$x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/2$.
+
+Let $L \in \class{IP}$
+exhibited by $(P, V)$. We define security with respect to a game associated to
+adversary $D$, verifier $V^*$, and simulator $M^*$. Suppose that $L$ is a finite
+set\footnote{This is without loss of generality, since we
+consider polynomial-time adversaries.} and let $x \sample L$. Let $y_1 \sample
+\brackets{P, V^*}(x)$ and $y_0 \sample M^*(x)$ choose a bit $b \sample \bits$.
+On input $(x, y_b)$, adversary $\advD$ outputs a bit $b^\prime$ and wins if
+$b=b^\prime$. Let $k = |L|$ and define the advantage of $\advD$ as
+\[
+  \Delta(k) = |\Pr[\advD(x, y_1)=1] - \Pr[\advD(x, y_0)=1]|
+\]
+We say that $(P, V)$ is \emph{computational zero-knowledge} (or just
+\emph{zero-knowledge}) if
+for every probabilistic polynomial-time adversary $\advD$,
+  for every probabilistic polynomial-time verifier $V^*$,
+    there exists probabilistic polynomial-time simulator $M^*$ such that $\Delta(k)$ is
+    negligible.
+The security notion achieved by Neff's protocol is somewhat weaker: a proof system $(P, V)$ is
+\emph{honest verifier zero-knowledge} (HVZK) if
+for every probabilistic polynomial-time adversary $\advD$,
+  there exists a probabilistic polynomial-time simulator $M^*$ such that
+\[
+  |\Pr[\advD(x, \brackets{P,V}(x))=1] - \Pr[\advD(x, M^*(x))=1]|
+\]
+is a negligible function of $k$.
 
 \section{The Neff shuffle} \label{section:neff-shuffle}
 
