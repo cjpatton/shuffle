@@ -34,7 +34,42 @@
 \setcounter{foot}{1}
 \setlength\parindent{2em}
 
+
 %%%%% Macros. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+\newcommand{\note}[1]{}
+
+% Sets
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Zmodp}{\mathbb{Z}_p}
+\newcommand{\Zmodq}{\mathbb{Z}_q}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\bits}{\{0,1\}}
+\newcommand*\Union{\bigcup}
+\newcommand*\Intersect{\bigcap}
+\newcommand*\union{\cup}
+\newcommand*\intersect{\cap}
+\newcommand*\by{\times}
+%\newcommand{\sample}{\xleftarrow{\text{\tiny{\$}}}}
+\newcommand{\sample}{\mathrel{\leftarrow\mkern-14mu\leftarrow}}
+
+% Asymptotics
+\newcommand{\negl}{\proc{negl}}
+\newcommand{\poly}{\proc{poly}}
+
+\newcommand{\heading}[1]{\noindent \textsc{#1}}
+
+% Misc.
+\newcommand{\brackets}[1]{\langle #1 \rangle}
+\newcommand{\view}{\proc{view}}
+
+\newcommand{\pk}{K}
+\newcommand{\sk}{k}
+
+\newcommand{\advA}{\mathcal{A}}
+
+%%%%% Title. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \date{\today}
 \title{Verifying a shuffle in zero-knowledge}
@@ -49,15 +84,6 @@
 \begin{document}
 
   \maketitle
-
-\section{Progress report}
-I've completed the intro for the write up, outlined the remaining sections, and
-found all the references I'll need. I've worked through most of the protocol and
-am ready to proceed with implementation. So far, I've coded the preliminaries:
-ElGamal encryption and batch decryption and shuffling. It was necessary to code
-ElGamal from scratch, because the library available for Go rolls encoding and
-encryption into one function; in order to do Neff's proof, I need to be able to
-handle group elements. Code and test cases can be found at github.com/cjpatton/shuffle.
 
 \section{Introduction}
 
@@ -107,11 +133,60 @@ github.com/cjpatton/shuffle}}.
 
 \section{Preliminaries} \label{section:prelim}
 
-Notation.
+If $X$ is a finite set, let $x \sample X$ denote uniformly sampling an
+element $x$ from the set. Let $y \gets A(x)$ denote running $A$ on input $x$ and
+assigning its output to $y$. Let $y \gets A(x; r)$ denote the execution of a
+probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
+\sample A(x)$ denote choosing $r \sample \bits^\infty$ and executing $y \gets
+A(x; r)$. Let $[i..j]$ where $i \le j$ denote the set of integers from $i$ to
+$j$ inclusive.
+Finally, a function $\Delta(n)$ is negligible if for all positive polynomials
+$p(\cdot)$ and sufficiently large $n$, $\Delta(n) < \frac{1}{p(n)}$.
 
 \subsection{ElGamal encryption}
 
+Fix a prime number $p$ and let $\Zmodp$ denote the modular ring of order $p$.
+In what follows, we assume arithmetic is performed in the modular ring $\Zmodp$.
+Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
+\Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
+\textit{public parameters}. The \textit{secret-key} is chosen uniformly from
+the set of powers of $g$ mod $p$: let $\sk \sample [1..q-1]$. Let $\pk = g^\sk$ be
+the \textit{public-key}.
+
+Encryption of $m \in \bits^*$ proceeds as follows:
+the plaintext is encoded as $M \in \Zmodp^*$. (Of course, only a subset of
+$\bits^*$ may be encoded for a fixed modulus $p$.)
+Let $r \sample [1..q-1]$,
+$R = g^r$,
+$S = K^r$, and
+$C = M \cdot S$.
+The ciphertext is the tuple $(R, C)$.
+Decryption of a ciphertext $(R, C) \in \Zmodp^* \by \Zmodp^*$ proceeds as follows:
+let $S = R^\sk$ and
+$M = C \cdot S^{-1}$.
+The plaintext $m$ is recovered by decoding $M$.
+
+This encryption scheme is known to be \textit{semantically secure} under the
+decisional Diffie-Hellman assumption \cite{ty98}. Informally speaking, this
+means that if given $\pk$, it is infeasible for any adversary to determine
+$\sk$, then given $(C,R)$, it is infeasible for any adversary to
+learn anything meaningful about $M$ (nor $m$). As we're not
+interested in the security of ElGamal from a privacy standpoint, we won't
+formalize semantic security. However, we define the DDH assumption.
+
 \subsection{Decisional Diffie-Hellman}
+
+Let $(p, q, g)$ be the public parameters of the ElGamal cryptosystem. The game
+the adversary $\advA$ plays is defined as follows: let $a, b, r \sample [1..q-1]$ and
+let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose a random bit
+$b \sample \bits$. On input $(A, B, Y_b)$, the adversary outputs a bit
+$b^\prime \in \bits$. The advantage of $\advA$ is defined as
+\[
+  \Delta(q) = |\Pr[\advA(A, B, Y_1)=1] - \Pr[\advA(A, B, Y_0)=1]|
+\]
+The DDH assumption is that $\Delta(q)$ is negligible.
+
+
 
 \subsection{Honest verifier zero-knowledge}
 
@@ -139,6 +214,9 @@ This is what we actually implement.
 
   \bibitem{cp92}  D. Chaum and T.P. Pedersen. ``Wallet databases with
     observers.'' Appeared in \textit{CRYPTO'92.}
+
+  \bibitem{ty98} Yiannis Tsiounis and Moti Yung 1998. ``On the security of
+    ElGamal based encryption.'' Appeared in \textit{PKC'98.}
 
   \bibitem{goldreich} Oded Goldreich, 2001. \textit{Foundations of Cryptography.}
 
