@@ -8,6 +8,7 @@
 \usepackage{graphics}
 \usepackage[toc,page]{appendix}
 \usepackage[font={small}]{caption}
+\usepackage{mathdots}
 \usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -70,6 +71,8 @@
 \newcommand{\varm}{M}
 \newcommand{\varc}{C}
 \newcommand{\varr}{R}
+\newcommand{\varx}{X}
+\newcommand{\vary}{Y}
 
 \newcommand{\advD}{D}
 
@@ -86,6 +89,16 @@
 \setcounter{tocdepth}{2}
 
 \renewcommand{\cal}[1]{\mathcal{#1}}
+
+\newcommand{\oneCol}[2]{
+\begin{center}
+        \framebox{
+        \begin{tabular}{c@{\hspace*{.4em}}}
+        \begin{minipage}[t]{#1\textwidth} #2 \end{minipage}
+        \end{tabular}
+        }
+\end{center}
+}
 
 %%%%% Content. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -147,7 +160,8 @@ assigning its output to $y$. Let $y \gets A(x; r)$ denote the execution of a
 probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
 \getsr A(x)$ denote choosing $r \getsr \bits^\infty$ and executing $y \gets
 A(x; r)$. Let $[i..j]$ where $i \le j$ denote the set of integers from $i$ to
-$j$ inclusive.
+$j$ inclusively.
+Let $[n] = [1..n]$.
 Let $y \getsr \brackets{P, V}(x)$ denote the probabilistic execution of
 interactive Turing machines $P$ and $V$ on common input $x$. When the protocol
 finishes, the output of $V$ is assigned to $y$.
@@ -163,9 +177,9 @@ Fix a prime number $p$ and let $\Zmodp$ denote the modular ring of order $p$.
 In what follows, we assume arithmetic is performed in the modular ring $\Zmodp$.
 Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
 \Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
-\textit{public parameters}. The \textit{secret-key} is chosen uniformly from
+\textit{public parameters}. The \textit{secret key} is chosen uniformly from
 the set of powers of $g$ mod $p$: let $\sk \getsr [1..q-1]$. Let $\pk = g^\sk$ be
-the \textit{public-key}. Key generation is denoted $(K, k) \getsr \gen(p, q,
+the \textit{public key}. Key generation is denoted $(K, k) \getsr \gen(p, q,
 g)$.
 Encryption and decryption operate on group elements.\footnote{
 Public-key encryption schemes are typically defined on bit
@@ -188,7 +202,7 @@ ElGamal is known to be \textit{semantically secure} under the
 decisional Diffie-Hellman assumption \cite{elgamal84,ty98}. Informally speaking, this
 means that if given $\pk$, it is infeasible for any adversary to determine
 $\sk$, then given $(C,R)$, it is infeasible for any adversary to
-learn anything meaningful about $M$ (nor $m$). As we're not
+learn anything meaningful about $M$. As we're not
 interested in the security of ElGamal from a privacy standpoint, we won't
 formalize semantic security. However, we define the DDH assumption in the next
 subsection.
@@ -199,7 +213,7 @@ Let $(\varc_1, \varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by \Zmodp^*$ b
 sequence of corresponding ElGamal ciphertexts encrypted under the public-key
 $\pk$. The mix server, who possesses the secret-key $\sk$, takes as input
 the ciphertexts and outputs a sequence $\varm_{\pi(1)}, \ldots, \varm_{\pi(n)}$
-where $\pi$ is a permutation on $[1..n]$.
+where $\pi$ is a permutation on $[n]$.
 We remark that there is a natural extension of this scheme for mixnets with a
 cascade of servers, each possessing its own decryption key \cite{cm06}. Indeed,
 Camenisch and Mityagin use the Neff proof in order to verify the output of each
@@ -225,10 +239,11 @@ function $\Delta(q)$ is negligible.
 Zero-knowledge is defined in \cite{goldreich} with respect to the class of
 formal languages with interactive proof systems. A language $L$ has an
 interactive proof system if there exists a pair of probabilistic algorithms $(P,
-V)$ such that for all $x \in L$, $\Pr[\brackets{P, V}(x) = 1] = 1$, and for all
-$x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/2$. The class of languages
+V)$ such that for all $x \in L$, $\Pr[\brackets{P, V}(x) = 1] \ge 2/3$
+(this property is called \emph{completeness}), and for all
+$x \not\in L$, $\Pr[\brackets{P, V}(x) = 1] \le 1/3$ (this property is called
+\emph{soundenss}). The class of languages
 with interactive proof systems is denoted $\class{IP}$.
-%TODO(cjpatton) verify in Goldreich
 
 Let $L \in \class{IP}$
 exhibited by $(P, V)$. We define security with respect to a game associated to
@@ -255,22 +270,22 @@ for every probabilistic polynomial-time adversary $\advD$,
   |\Pr[\advD(x, \brackets{P,V}(x))=1] - \Pr[\advD(x, M^*(x))=1]|
 \]
 is a negligible function of $k$.
-%TODO(cjpatton) verify in Goldreich
 
 \section{The Neff shuffle} \label{section:neff-shuffle}
 
 We now give the syntax of an interactive proof system for mixnets. The prover
-$P$ (nominally the mix server) possesses the secret-key $\sk$ and the verifier $V$ possesses
-the public-key $\pk$. The common input of $P$ and $V$ is all of the messages passed through the
-mix server. The mix takes as input a sequence of ciphertexts $(\varc_1,
-\varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by \Zmodp^*$ and outputs a
-sequence of plaintexts $\varm_{1}, \ldots, \varm_{n} \in \Zmodp^*$. Let $x \in
-\bits^*$ denote the encoding of these messages. We say $x \in L$ if and only if
-there exists a bijection $\pi : [1..n] \rightarrow [1..n] $ such that for every $i \in [1..n]$,
+$P$ (nominally the mix server) possesses the secret key $\sk$ and the verifier
+$V$ possesses the public key $\pk$. The common input of $P$ and $V$ is all of
+the messages passed through the mix server. The mix takes as input a sequence of
+ciphertexts $(\varc_1, \varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by
+\Zmodp^*$ and outputs a sequence of plaintexts $\varm_{1}, \ldots, \varm_{n} \in
+\Zmodp^*$. Let $x \in \bits^*$ denote the encoding of the input ciphertexts and
+output plaintexts. We say $x \in L$ if and only if there exists a bijection $\pi
+: [n] \rightarrow [n] $ such that for every $i \in [n]$,
 $\varm_{\pi(i)} = \dec_k(\varc_{i}, \varr_{i})$.
 
 A trivial proof system for $L$ is one in which the prover transmits to the
-verifier its secret-key and the verifier decrypts each of the ciphertexts. Of
+verifier its secret key and the verifier decrypts each of the ciphertexts. Of
 course, this completely exposes $\pi$. Our goal is to specify a proof system $(P,
 V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing the
 permutation or the secret key. A proof system that is HVZK is sufficient to
@@ -281,7 +296,82 @@ which we define in sections~\ref{section:ilmpp}
 and~\ref{section:simple-k-shuffle}.
 
 \subsection{The basic protocol and its security} \label{section:ilmpp}
-Not useful yet ...
+The main building block for the protocol is a zero-knowledge proof for the
+\emph{iterated logarithmic multiplication problem (ILMP)}. Let $n \in \N$, $x_1, \ldots, x_n \in
+[q-1]$, and $y_1, \ldots y_n \in [q-1]$. Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$
+for each $i \in [n]$. Given the sequences $(X_1, \dots X_n)$ and $(Y_1, \dots,
+Y_n)$, the problem is to decide if $g^{x_1 \cdots x_n} = g^{y_1 \cdots y_n}$.
+The following is an interactive proof for the ILMP.
+\begin{figure}[h]
+  \oneCol{0.80}{
+  \underline{$\brackets{P,V}\big( (X_1, \cdots, X_n), (Y_1, \dots,  Y_n)\big)$}:
+  \begin{enumerate}
+    \vspace{4pt}
+    \item[P1.]
+      Let $\theta_0 = \theta_1 = 0$ and $\theta_1, \ldots, \theta_{n-1} \getsr [q-1]$.
+      Let $A_i = X_i^{\theta_{i-1}} \cdot Y_i^{\theta_i}$ for every $i \in [n]$.
+      Send the sequence $A_1, \ldots A_n$ to $V$.
+
+    \vspace{4pt}
+    \item[V1.]
+      Let $\gamma \getsr [q-1]$. Send $\gamma$ to $P$.
+
+    \vspace{4pt}
+    \item[P2.]
+      Compute $r_1, \ldots, r_{n-1} \in [q-1]$ satisfying the set of equations:
+      \begin{equation} \label{eq-ilmp}
+        \begin{aligned}
+           Y_1^{r_1} &= A_1 \cdot X_1^{-\gamma} \\
+           X_i^{r_{i-1}} \cdot Y_i^{r_i} &= A_i \qquad (\forall \, i \in [2..n-2]) \\
+           X_n^{r_{n-1}} &= A_n \cdot Y_n^{(-1)^{(n-1)}\gamma} \\
+       \end{aligned}
+     \end{equation}
+     Send the sequence $r_1, \ldots r_{n-1}$ to $V$.
+
+    \vspace{4pt}
+    \item[V2.]
+      Accept if the equation~(\ref{eq-ilmp}) holds.
+
+  \end{enumerate}
+  }
+  \caption{an interactive proof for ILMP. The prover $P$ knows $x_1, \ldots x_n$
+    and $y_1, \ldots, y_n$.}
+\end{figure}
+
+\heading{Completeness.}
+Assume that for every $i \in [n]$, it holds that $x_i \ne 0$ and $y_i \ne 0$.
+(Otherwise, the verifier could see by inspection whether or not $(X_1, \ldots
+X_n),(Y_1, \ldots, Y_n)$ is in the language by inspection. If $(\exists \, i \in
+[n]) \, X_i = 1$, then $x_i = 0$ and $g^{x_1 \cdots x_n} = 1$. The same is true for
+$Y_i$.)
+Taking the log base-$g$ of both sides of equation~(\ref{eq-ilmp}) yields the
+following linear system of equations:
+\begin{equation}
+  \begin{bmatrix}
+    y_1 & 0   & 0      & 0       & \cdots  & 0       \\
+    x_2 & y_2 & 0      & 0       & \cdots  & 0       \\
+    0   & x_3 & y_3    & 0       & \cdots  & 0       \\
+        &     &        &         & \ddots  &         \\
+    0   & 0   & \cdots & 0       & x_{n-1} & y_{n-1} \\
+    0   & 0   & \cdots & 0       & 0       & y_{n}
+  \end{bmatrix}
+  \begin{bmatrix}
+    1\\
+  \end{bmatrix} = 
+  \begin{bmatrix}
+    2\\
+  \end{bmatrix}
+\end{equation}
+
+
+
+\heading{Security.}
+Neff points out this problem is closely related to the Chaum-Pederson signature
+scheme \cite{cp92} and the corresponding solution is nothing more than a
+multidimensional generalization of their proof:
+
+
+
 
 \subsection{Simple $k$-shuffle} \label{section:simple-k-shuffle}
 Not useful yet ...
