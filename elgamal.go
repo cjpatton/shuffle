@@ -96,11 +96,9 @@ func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 	sk.G = params.G
 	sk.Q = params.Q
 	// Choose a random exponent in [0,Q-1).
-	if sk.X, err = rand.Int(rand.Reader, pk.qMinusOne); err != nil {
+	if sk.X, err = pk.Sample(); err != nil {
 		return nil, nil
 	}
-	// Add 1 so that the exponent is in [1,Q-1].
-	sk.X.Add(sk.X, pk.one)
 	sk.qMinusX = new(big.Int)
 	sk.qMinusX.Sub(params.Q, sk.X)
 
@@ -113,18 +111,28 @@ func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 	return
 }
 
+// Sample samples a random value from [1..q-1.]
+func (pk *PublicKey) Sample() (*big.Int, error) {
+	// Choose a random exponent in [0,Q-1).
+	R, err := rand.Int(rand.Reader, pk.qMinusOne)
+	if err != nil {
+		return nil, err
+	}
+	// Add 1 so that the exponent is in [1,Q-1].
+	R.Add(R, pk.one)
+	return R, nil
+}
+
 // Encrypt takes as input a plaintext (presumably an element of Z/p)
 // and outputs an ElGamal ciphertext (a tuple over Z/p).
 func (pk *PublicKey) Encrypt(M *big.Int) (R *big.Int, C *big.Int) {
 	var err error
-	R = new(big.Int)
 	C = new(big.Int)
 
-	// Choose a random exponent in [1,Q-1].
-	if R, err = rand.Int(rand.Reader, pk.qMinusOne); err != nil {
+	R, err = pk.Sample()
+	if err != nil {
 		return nil, nil
 	}
-	R.Add(R, pk.one)
 
 	C.Exp(pk.Y, R, pk.P)
 	C.Mul(M, C)

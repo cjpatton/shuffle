@@ -67,3 +67,6 @@ func TestShuffle(t *testing.T) {
 		}
 	}
 }
+
+func TestSILMP(t *testing.T) {
+}
