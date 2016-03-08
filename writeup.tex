@@ -75,6 +75,7 @@
 \newcommand{\vary}{Y}
 
 \newcommand{\advD}{D}
+\newcommand{\advA}{A}
 
 \newcommand{\gen}{\mathcal{G}}
 \newcommand{\enc}{\mathcal{E}}
@@ -220,7 +221,7 @@ Camenisch and Mityagin use the Neff proof in order to verify the output of each
 mix in the cascade. If a dishonest mix is detected, the protocol is run without
 without using it.
 
-\subsection{Decisional Diffie-Hellman}
+\subsection{Decisional Diffie-Hellman} \label{sec-ddh}
 
 Let $(p, q, g)$ be the public parameters of the ElGamal cryptosystem. The game
 the adversary $\advD$ plays is defined as follows: let $a, b, r \getsr
@@ -297,7 +298,7 @@ and~\ref{section:simple-k-shuffle}.
 
 \subsection{The basic protocol and its security} \label{section:ilmpp}
 The main building block for the protocol is a zero-knowledge proof for the
-\emph{iterated logarithmic multiplication problem (ILMP)}. Let $n \in \N$, $x_1, \ldots, x_n \in
+\emph{iterated logarithmic multiplication problem} (ILMP). Let $n \in \N$, $x_1, \ldots, x_n \in
 [q-1]$, and $y_1, \ldots y_n \in [q-1]$. Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$
 for each $i \in [n]$. Given the sequences $(X_1, \dots X_n)$ and $(Y_1, \dots,
 Y_n)$, the problem is to decide if $g^{x_1 \cdots x_n} = g^{y_1 \cdots y_n}$.
@@ -338,6 +339,10 @@ The following is an interactive proof for the ILMP.
     and $y_1, \ldots, y_n$.}
 \end{figure}
 
+Neff points out this problem is closely related to the Chaum-Pederson signature
+scheme \cite{cp92} and the corresponding solution is nothing more than a
+multidimensional generalization of their proof.
+
 \heading{Completeness.}
 Assume that for every $i \in [n]$, it holds that $x_i \ne 0$ and $y_i \ne 0$.
 (Otherwise, the verifier could see by inspection whether or not $(X_1, \ldots
@@ -345,8 +350,8 @@ X_n),(Y_1, \ldots, Y_n)$ is in the language by inspection. If $(\exists \, i \in
 [n]) \, X_i = 1$, then $x_i = 0$ and $g^{x_1 \cdots x_n} = 1$. The same is true for
 $Y_i$.)
 Taking the log base-$g$ of both sides of equation~(\ref{eq-ilmp}) yields the
-following linear system of equations:
-\begin{equation}
+following system of linear equations:
+\begin{equation}\label{eq-ilmp-completeness}
   \begin{bmatrix}
     y_1 & 0   & 0      & 0       & \cdots  & 0       \\
     x_2 & y_2 & 0      & 0       & \cdots  & 0       \\
@@ -356,20 +361,53 @@ following linear system of equations:
     0   & 0   & \cdots & 0       & 0       & y_{n}
   \end{bmatrix}
   \begin{bmatrix}
-    1\\
-  \end{bmatrix} = 
+    r_1 - \theta_1 \\
+    r_2 - \theta_2 \\
+    r_3 - \theta_3 \\
+    \vdots \\
+    r_{n-2} - \theta_{n-2} \\
+    r_{n-1} - \theta_{n-1}
+  \end{bmatrix} =
   \begin{bmatrix}
-    2\\
+    -\gamma x_1 \\
+    0 \\
+    0 \\
+    \vdots \\
+    0 \\
+    (-1)^{n-1}\gamma
   \end{bmatrix}
 \end{equation}
+It can be shown that the $(n \times n)$ matrix in the left-hand side of
+equation~(\ref{eq-ilmp-completeness}) is non-singular. This implies there exists
+a unique solution $(r_1, \ldots, r_{n-1})$ satisfying this system. Neff gives
+the solution explicitly:
+\begin{equation} \label{eq-ilmp-findr}
+  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n \frac{y_j}{x_j}
+\end{equation}
+Thus, if the prover isn't cheating, then the verifier accepts with
+probability 1.
 
-
+\heading{Soundness.}
+Suppose the prover is cheating and $g^{x_1 \cdots x_n} \ne g^{y_1 \cdots y_n}$.
+For any $r_1, \ldots, r_{n-1} \in [q-1]$, there is at most one $\gamma \in
+[q-1]$ such that equation~(\ref{eq-ilmp}) holds. If $\gamma$ is chosen randomly,
+then the verifier accepts with probability at most $1/q$.
 
 \heading{Security.}
-Neff points out this problem is closely related to the Chaum-Pederson signature
-scheme \cite{cp92} and the corresponding solution is nothing more than a
-multidimensional generalization of their proof:
-
+Let $x$ be an instance of ILMP.
+The claim is that if the DDH assumption holds, then for every probabilistic
+polynomial $\advD$, there exists a probabilistic, polynomial time simulator
+$M^*$ such that
+\[
+  \Delta(q) = |\Pr[D(x, \brackets{P,V}(x))=1] - \Pr[D(x, M^*(x)|
+\]
+is negligible. To prove this claim, one would argue the contrapositive: suppose
+there exists adversary $\advD$ such that for every simulator $M^*$, its
+advantage in distinguishing the distribution $\brackets{P,V}(x)$ and $M^*(x)$ is
+non-negligible. There exists an adversary $\advA$ whose advantage in the DDH
+game outlined in section~\ref{sec-ddh} is non-negligible. We omit the details of
+the proof here, but this can be shown via a concrete reduction from $\advA$ to
+$\advD$
 
 
 
