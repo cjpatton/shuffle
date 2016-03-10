@@ -68,8 +68,47 @@ func TestShuffle(t *testing.T) {
 	}
 }
 
-// Test the ILMP protocol.
+// Test the ILMP protocol on various batch sizes.
 func TestSILMPP(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+	for N := 2; N < 10; N++ {
+		x := make([]big.Int, N)
+		y := make([]big.Int, N)
+
+		for i := 0; i < N; i++ {
+			x[i].SetInt64(int64(i) + 2)
+			y[i].SetInt64(int64(i) + 2)
+		}
+
+		c, _ := params.Sample()
+		x[0].Mul(&x[0], c)
+		y[N-1].Mul(&y[N-1], c)
+
+		X := make([]big.Int, N)
+		Y := make([]big.Int, N)
+		for i := 0; i < N; i++ {
+			X[i].Exp(params.G, &x[i], params.P)
+			Y[i].Exp(params.G, &y[i], params.P)
+		}
+
+		msg := make(chan []big.Int)
+
+		go func() {
+			if err := ILMPProve(params, x, y, msg); err != nil {
+				t.Errorf("%d: prover: %s", N, err)
+			}
+		}()
+
+		if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+			t.Errorf("%d: verifier:", N, err)
+		} else if !ok {
+			t.Errorf("%d: failed to verify", N)
+		}
+	}
+}
+
+// Test the ILMP protocol on a more realistic input.
+func TestSILMPP2(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 
 	N := 10

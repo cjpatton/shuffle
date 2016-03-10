@@ -83,7 +83,7 @@ func GeneratePerm(n int) []int {
 // takes as input the log of each element of the public sequences X and Y.
 //
 // Communication is implemented using a Go channel. As such, it should be very
-// easy to implement this protocol over a network channel.
+// easy to overlay this code on a network connection.
 func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error {
 	if len(x) != len(y) {
 		msg <- nil
@@ -122,13 +122,11 @@ func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error 
 
 	// P2
 	r := make([]big.Int, N-1)
-	for i := 0; i < N-1; i++ {
-		num := new(big.Int).SetUint64(1)
-		den := new(big.Int).SetUint64(1)
-		for j := i + 1; j < N; j++ {
-			num.Mul(num, &y[j])
-			den.Mul(den, &x[j])
-		}
+	num := new(big.Int).SetUint64(1)
+	den := new(big.Int).SetUint64(1)
+	for i := N - 2; i >= 0; i-- {
+		num.Mul(num, &y[i+1])
+		den.Mul(den, &x[i+1])
 		r[i].Div(num, den)
 		r[i].Mul(&r[i], &gamma[0])
 		r[i].Mod(&r[i], params.Q)
