@@ -179,7 +179,7 @@ In what follows, we assume arithmetic is performed in the modular ring $\Zmodp$.
 Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
 \Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
 \textit{public parameters}. The \textit{secret key} is chosen uniformly from
-the set of powers of $g$ mod $p$: let $\sk \getsr [1..q-1]$. Let $\pk = g^\sk$ be
+the set of powers of $g$ mod $p$: let $\sk \getsr [q-1]$. Let $\pk = g^\sk$ be
 the \textit{public key}. Key generation is denoted $(K, k) \getsr \gen(p, q,
 g)$.
 Encryption and decryption operate on group elements.\footnote{
@@ -187,7 +187,7 @@ Public-key encryption schemes are typically defined on bit
 strings. It is easy to messages as elements of $\Zmodp^*$, but the number of
 messages that can be encoded depends on the modulus $p$.}
 Encryption of $M \in \Zmodp^*$ proceeds as follows:
-Let $r \getsr [1..q-1]$,
+Let $r \getsr [q-1]$,
 $R = g^r$,
 $S = K^r$, and
 $C = M \cdot S$.
@@ -225,7 +225,7 @@ without using it.
 
 Let $(p, q, g)$ be the public parameters of the ElGamal cryptosystem. The game
 the adversary $\advD$ plays is defined as follows: let $a, b, r \getsr
-[1..q-1]$ and let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose
+[q-1]$ and let $A = g^a$, $B = g^b$, $Y_0 = g^r$, and $Y_1 = g^{ab}$. Choose
 a random bit $b \getsr \bits$. On input $(A, B, Y_b)$, the adversary outputs a
 bit $b^\prime \in \bits$ and wins if $b=b^\prime$. The advantage of $\advD$ is
 defined as
@@ -302,10 +302,10 @@ if $g^{x_1 \cdots x_n} = g^{y_1 \cdots y_n}$.
 Neff points out this problem is closely related to the Chaum-Pederson signature
 scheme \cite{cp92} and the corresponding solution is nothing more than a
 multidimensional generalization of their proof.
-The following is an interactive proof for the ILMP.
+The following is an interactive proof for ILMP.
 \begin{figure}[h]
   \oneCol{0.80}{
-  \underline{$\brackets{P,V}\big( (X_1, \cdots, X_n), (Y_1, \dots,  Y_n)\big)$}:
+  \underline{$\textsc{Silmpp}_{\brackets{P,V}}\big( (X_1, \cdots, X_n), (Y_1, \dots,  Y_n)\big)$}:
   \begin{enumerate}
     \vspace{4pt}
     \item[P1.]
@@ -371,7 +371,7 @@ following system of linear equations:
     0 \\
     \vdots \\
     0 \\
-    (-1)^{n-1}\gamma
+    (-1)^{(n-1)}\gamma
   \end{bmatrix}
 \end{equation}
 It can be shown that the $(n \times n)$ matrix in the left-hand side of
@@ -412,10 +412,34 @@ Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$ for each $i \in [n]$. Let $c, d \in
 [q-1]$, $C = g^c$, and $D = g^d$. We say that $x \in \textsc{Shuffle0}$ if $x$
 is an encoding of $(X_1, \dots X_n)$, $(Y_1, \dots Y_n)$, $C$, and $D$ and there
 exists a permutation $\pi : [n] \to [n]$ such that for every $i \in [n]$, it
-holds that $Y_i^d = X_{\pi(i)}^c$.
+holds that $Y_i^d = X_{\pi(i)}^c$. A zero-knowledge proof for
+$\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
+\begin{figure}[h]
+  \oneCol{0.80}{
+  \underline{$\textsc{Shuffle0}_{\brackets{P,V}}\big( (X_1, \cdots, X_n), (Y_1, \dots,  Y_n), C, D\big)$}:
+  \begin{enumerate}
+    \vspace{4pt}
+    \item[V1.] Let $t \getsr [q-1]$, $U = D^t$, and $W = C^t$. Let $\hat{X}_i =
+      X_i / U$ and $\hat{Y}_i = Y_i / W$ for every $i \in [n]$. Send $t$ to $P$.
 
-Given the
-sequences $(X_1, \dots X_n)$ and $(Y_1, \dots, Y_n)$, 
+    \vspace{4pt}
+    \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i / U$ and
+      $\hat{Y}_i = Y_i / W$ for every $i \in [n]$. Run
+      $\textsc{Silmp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n), (C,
+      \dots, C) \big)$.
+
+    \item[P2.]
+      Run $\textsc{Silmp}_{\brackets{P,V}}\big( (\hat{Y}_1, \dots, \hat{Y}_n),
+      (D, \dots, D) \big)$.
+    \vspace{4pt}
+  \end{enumerate}
+  }
+  \caption{The simple $n$-shuffle, an interactive proof system for
+    $\textsf{Shuffle0}$. The prover knows $x_1, \ldots x_n$ and $y_1, \ldots,
+    y_n$, $c$, and $d$.
+  }
+  \label{fig-shuffle0}
+\end{figure}
 
 
 \subsection{The main protocol} \label{sec-general-n-shuffle}
