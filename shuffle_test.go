@@ -68,9 +68,11 @@ func TestShuffle(t *testing.T) {
 	}
 }
 
-func testSILMPP(N int, t *testing.T) {
+// Test the ILMP protocol.
+func TestSILMPP(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 
+	N := 10
 	x := make([]big.Int, N)
 	y := make([]big.Int, N)
 
@@ -78,9 +80,19 @@ func testSILMPP(N int, t *testing.T) {
 		x[i].SetInt64(int64(i) + 2)
 		y[i].SetInt64(int64(i) + 2)
 	}
-	c := new(big.Int).SetUint64(27)
+
+	c, _ := params.Sample()
+	d, _ := params.Sample()
+	e, _ := params.Sample()
+	f, _ := params.Sample()
 	x[0].Mul(&x[0], c)
+	x[7].Mul(&x[7], d)
+	x[2].Mul(&x[2], e)
+	x[0].Mul(&x[0], f)
 	y[1].Mul(&y[1], c)
+	y[9].Mul(&y[9], d)
+	y[2].Mul(&y[2], e)
+	y[5].Mul(&y[5], f)
 
 	X := make([]big.Int, N)
 	Y := make([]big.Int, N)
@@ -104,8 +116,50 @@ func testSILMPP(N int, t *testing.T) {
 	}
 }
 
-func TestSILMPP(t *testing.T) {
-	for i := 2; i <= 10; i++ {
-		testSILMPP(i, t)
+// Test the ILMP protocol on a mal-formed input.
+func TestBadSILMPP(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	N := 10
+	x := make([]big.Int, N)
+	y := make([]big.Int, N)
+
+	for i := 0; i < N; i++ {
+		x[i].SetInt64(int64(i) + 2)
+		y[i].SetInt64(int64(i) + 2)
+	}
+
+	// This input is mal-formed because g^{x_1, ..., x_n} != g^{y_1, ..., y_n}.
+	c, _ := params.Sample()
+	d, _ := params.Sample()
+	e, _ := params.Sample()
+	f, _ := params.Sample()
+	x[0].Mul(&x[0], c)
+	x[7].Mul(&x[7], d)
+	x[2].Mul(&x[2], e)
+	x[0].Mul(&x[0], f)
+	y[9].Mul(&y[9], d)
+	y[2].Mul(&y[2], e)
+	y[5].Mul(&y[5], f)
+
+	X := make([]big.Int, N)
+	Y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		X[i].Exp(params.G, &x[i], params.P)
+		Y[i].Exp(params.G, &y[i], params.P)
+	}
+
+	msg := make(chan []big.Int)
+
+	go func() {
+		if err := ILMPProve(params, x, y, msg); err != nil {
+			t.Errorf("%d: prover: %s", N, err)
+		}
+	}()
+
+	if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+		t.Errorf("%d: verifier:", N, err)
+	} else if ok {
+		t.Errorf("%d: verification passed: expected failure", N)
 	}
 }

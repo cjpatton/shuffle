@@ -79,6 +79,11 @@ func GeneratePerm(n int) []int {
 	return perm
 }
 
+// ILMPProve implements the prover role in the interactive proof for ILMP. It
+// takes as input the log of each element of the public sequences X and Y.
+//
+// Communication is implemented using a Go channel. As such, it should be very
+// easy to implement this protocol over a network channel.
 func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error {
 	if len(x) != len(y) {
 		msg <- nil
@@ -137,6 +142,8 @@ func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error 
 	return nil
 }
 
+// ILMPVerify implements the verifier role in the interactive proof for ILMP.
+// It takes as input the public sequences X and Y.
 func ILMPVerify(params *KeyParameters, X, Y []big.Int, msg chan []big.Int) (bool, error) {
 	var err error
 
