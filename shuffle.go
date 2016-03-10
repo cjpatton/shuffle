@@ -78,3 +78,132 @@ func GeneratePerm(n int) []int {
 	}
 	return perm
 }
+
+func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error {
+	if len(x) != len(y) {
+		msg <- nil
+		return errors.New("input lengths do not match")
+	}
+
+	// P1
+	N := len(x)
+	theta := make([]big.Int, N+1)
+	for i := 1; i < N; i++ {
+		t, err := params.Sample()
+		if err != nil {
+			msg <- nil
+			return err
+		}
+		theta[i] = *t
+	}
+
+	A := make([]big.Int, N)
+	var X, Y big.Int
+	for i := 0; i < N; i++ {
+		X.Mul(&x[i], &theta[i])
+		X.Exp(params.G, &X, params.P)
+		Y.Mul(&y[i], &theta[i+1])
+		Y.Exp(params.G, &Y, params.P)
+		A[i].Mul(&X, &Y)
+		A[i].Mod(&A[i], params.P)
+	}
+	msg <- A
+
+	// V1
+	gamma := <-msg
+	if gamma == nil {
+		return errors.New("channel closed by peer (V1)")
+	}
+
+	// P2
+	r := make([]big.Int, N-1)
+	for i := 0; i < N-1; i++ {
+		num := new(big.Int).SetUint64(1)
+		den := new(big.Int).SetUint64(1)
+		for j := i + 1; j < N; j++ {
+			num.Mul(num, &y[j])
+			den.Mul(den, &x[j])
+		}
+		r[i].Div(num, den)
+		r[i].Mul(&r[i], &gamma[0])
+		r[i].Mod(&r[i], params.Q)
+		if (N-i-1)%2 == 1 {
+			r[i].Sub(params.Q, &r[i])
+		}
+		r[i].Add(&r[i], &theta[i+1])
+	}
+	msg <- r
+
+	return nil
+}
+
+func ILMPVerify(params *KeyParameters, X, Y []big.Int, msg chan []big.Int) (bool, error) {
+	var err error
+
+	if len(X) != len(Y) {
+		msg <- nil
+		return false, errors.New("input lengths do not match")
+	}
+	N := len(X)
+
+	// P1
+	A := <-msg
+	if A == nil {
+		return false, errors.New("channel closed by peer (P1)")
+	}
+
+	// V1
+	gamma := make([]big.Int, 1)
+	t, err := params.Sample()
+	if err != nil {
+		msg <- nil
+		return false, err
+	}
+	gamma[0] = *t
+	msg <- gamma
+
+	// P2
+	r := <-msg
+	if r == nil {
+		return false, errors.New("channel closed by peer (P2)")
+	}
+
+	var L, R big.Int
+	// V2
+	//
+	// First equation
+	var qMinusGamma big.Int
+	qMinusGamma.Sub(params.Q, &gamma[0])
+	L.Exp(&Y[0], &r[0], params.P)
+	if (N-1)%2 == 1 {
+		R.Exp(&X[0], &qMinusGamma, params.P)
+	} else {
+		R.Exp(&X[0], &gamma[0], params.P)
+	}
+	R.Mul(&A[0], &R)
+	R.Mod(&R, params.P)
+	if L.Cmp(&R) != 0 {
+		return false, nil
+	}
+
+	// Intermediate equations
+	for i := 1; i < N-1; i++ {
+		L.Exp(&X[i], &r[i-1], params.P)
+		R.Exp(&Y[i], &r[i], params.P)
+		L.Mul(&L, &R)
+		L.Mod(&L, params.P)
+		if L.Cmp(&A[i]) != 0 {
+			return false, nil
+		}
+	}
+
+	// Last equation
+	L.Exp(&X[N-1], &r[N-2], params.P)
+	R.Exp(&Y[N-1], &qMinusGamma, params.P)
+	R.Mul(&A[N-1], &R)
+	R.Mod(&R, params.P)
+	if L.Cmp(&R) != 0 {
+		return false, nil
+	}
+	return true, nil
+}

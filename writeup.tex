@@ -149,7 +149,7 @@ mix waits until it receives a full batch of ciphertexts, decrypts them under its
 private key, and shuffles the output. In section~\ref{section:prelim}, I specify
 ElGamal encryption, describe the DDH assumption, and sketch the HVZK notion. In
 section~\ref{section:neff-shuffle}, I present the protocol and sketch its
-security. I implement the general $k$-shuffle as described in this section in
+security. I implement the general $n$-shuffle as described in this section in
 the Go programming language.\footnote{ Freely available at {\it
 github.com/cjpatton/shuffle}.}
 
@@ -287,21 +287,21 @@ $\varm_{\pi(i)} = \dec_k(\varc_{i}, \varr_{i})$.
 
 A trivial proof system for $L$ is one in which the prover transmits to the
 verifier its secret key and the verifier decrypts each of the ciphertexts. Of
-course, this completely exposes $\pi$. Our goal is to specify a proof system $(P,
-V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing the
-permutation or the secret key. A proof system that is HVZK is sufficient to
-achieve this goal, assuming the DDH problem is hard. Such a proof system is
-given by the general $k$-shuffle protocol defined in
-section~\ref{section:gen-k-shuffle}. It is built upon two simpler protocols,
-which we define in sections~\ref{section:ilmpp}
-and~\ref{section:simple-k-shuffle}.
+course, this completely exposes $\pi$. Our goal is to specify a proof system
+$(P, V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing
+the permutation or the secret key. A proof system that is HVZK is sufficient to
+achieve this goal, assuming the DDH problem is hard.
 
-\subsection{The basic protocol and its security} \label{section:ilmpp}
+\subsection{The basic protocol and its security} \label{section:ilmp}
 The main building block for the protocol is a zero-knowledge proof for the
-\emph{iterated logarithmic multiplication problem} (ILMP). Let $n \in \N$, $x_1, \ldots, x_n \in
-[q-1]$, and $y_1, \ldots y_n \in [q-1]$. Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$
-for each $i \in [n]$. Given the sequences $(X_1, \dots X_n)$ and $(Y_1, \dots,
-Y_n)$, the problem is to decide if $g^{x_1 \cdots x_n} = g^{y_1 \cdots y_n}$.
+\emph{iterated logarithmic multiplication problem} (ILMP).
+Let $n \in \N$, $x_1, \ldots, x_n \in [q-1]$, and $y_1, \ldots y_n \in [q-1]$.
+Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$ for each $i \in [n]$. Given the
+sequences $(X_1, \dots X_n)$ and $(Y_1, \dots, Y_n)$, the problem is to decide
+if $g^{x_1 \cdots x_n} = g^{y_1 \cdots y_n}$.
+Neff points out this problem is closely related to the Chaum-Pederson signature
+scheme \cite{cp92} and the corresponding solution is nothing more than a
+multidimensional generalization of their proof.
 The following is an interactive proof for the ILMP.
 \begin{figure}[h]
   \oneCol{0.80}{
@@ -323,7 +323,7 @@ The following is an interactive proof for the ILMP.
       \begin{equation} \label{eq-ilmp}
         \begin{aligned}
            Y_1^{r_1} &= A_1 \cdot X_1^{-\gamma} \\
-           X_i^{r_{i-1}} \cdot Y_i^{r_i} &= A_i \qquad (\forall \, i \in [2..n-2]) \\
+           X_i^{r_{i-1}} \cdot Y_i^{r_i} &= A_i \qquad (\forall \, i \in [2..n-1]) \\
            X_n^{r_{n-1}} &= A_n \cdot Y_n^{(-1)^{(n-1)}\gamma} \\
        \end{aligned}
      \end{equation}
@@ -335,13 +335,10 @@ The following is an interactive proof for the ILMP.
 
   \end{enumerate}
   }
-  \caption{an interactive proof for ILMP. The prover $P$ knows $x_1, \ldots x_n$
-    and $y_1, \ldots, y_n$.}
+  \caption{SILMP protocol, an interactive proof for ILMP. The prover $P$ knows
+    $x_1, \ldots x_n$ and $y_1, \ldots, y_n$.}
 \end{figure}
 
-Neff points out this problem is closely related to the Chaum-Pederson signature
-scheme \cite{cp92} and the corresponding solution is nothing more than a
-multidimensional generalization of their proof.
 
 \heading{Completeness.}
 Assume that for every $i \in [n]$, it holds that $x_i \ne 0$ and $y_i \ne 0$.
@@ -382,7 +379,7 @@ equation~(\ref{eq-ilmp-completeness}) is non-singular. This implies there exists
 a unique solution $(r_1, \ldots, r_{n-1})$ satisfying this system. Neff gives
 the solution explicitly:
 \begin{equation} \label{eq-ilmp-findr}
-  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n \frac{y_j}{x_j}
+  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n {y_j} \cdot (q - x_j)
 \end{equation}
 Thus, if the prover isn't cheating, then the verifier accepts with
 probability 1.
@@ -399,7 +396,7 @@ The claim is that if the DDH assumption holds, then for every probabilistic
 polynomial $\advD$, there exists a probabilistic, polynomial time simulator
 $M^*$ such that
 \[
-  \Delta(q) = |\Pr[D(x, \brackets{P,V}(x))=1] - \Pr[D(x, M^*(x)|
+  \Delta(q) = |\Pr[D(x, \brackets{P,V}(x))=1] - \Pr[D(x, M^*(x))=1|
 \]
 is negligible. To prove this claim, one would argue the contrapositive: suppose
 there exists adversary $\advD$ such that for every simulator $M^*$, its
@@ -407,16 +404,28 @@ advantage in distinguishing the distribution $\brackets{P,V}(x)$ and $M^*(x)$ is
 non-negligible. There exists an adversary $\advA$ whose advantage in the DDH
 game outlined in section~\ref{sec-ddh} is non-negligible. We omit the details of
 the proof here, but this can be shown via a concrete reduction from $\advA$ to
-$\advD$
+$\advD$.
+
+\subsection{Simple $n$-shuffle} \label{sec-simple-n-shuffle}
+Let $n \in \N$, $x_1, \ldots, x_n \in [q-1]$, and $y_1, \ldots y_n \in [q-1]$.
+Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$ for each $i \in [n]$. Let $c, d \in
+[q-1]$, $C = g^c$, and $D = g^d$. We say that $x \in \textsc{Shuffle0}$ if $x$
+is an encoding of $(X_1, \dots X_n)$, $(Y_1, \dots Y_n)$, $C$, and $D$ and there
+exists a permutation $\pi : [n] \to [n]$ such that for every $i \in [n]$, it
+holds that $Y_i^d = X_{\pi(i)}^c$.
+
+Given the
+sequences $(X_1, \dots X_n)$ and $(Y_1, \dots, Y_n)$, 
 
 
-
-\subsection{Simple $k$-shuffle} \label{section:simple-k-shuffle}
-Not useful yet ...
-
-\subsection{General $k$-shuffle} \label{section:gen-k-shuffle}
-This is what we actually implement.
-
+\subsection{The main protocol} \label{sec-general-n-shuffle}
+Let $X_1, \dots X_n, Y_1, \dots, Y_n \in \Zmodp^*$, $k \in [q-1]$, and $K =
+g^k$. We say $(Y_1, \dots, Y_n)$ is a shuffling of $(X_1, \dots X_n)$ if there
+exists a permutation $\pi : [n] \to [n]$ such that for every $i \in [n]$, it
+holds that $Y_i = X_{\pi(i)}^k$. We say $x \in \textsc{Shuffle}$ if $x$ is an
+an encoding of $X_1, \dots X_n, Y_1, \dots, Y_n$, and $K$ where $Y_1, \dots Y_n$ is a
+shuffling of $X_1, \dots, X_n$. The following protocol is an interactive proof
+for \textsc{Shuffle}.
 
 \begin{thebibliography}{99}
 

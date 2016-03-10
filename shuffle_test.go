@@ -68,5 +68,44 @@ func TestShuffle(t *testing.T) {
 	}
 }
 
-func TestSILMP(t *testing.T) {
+func testSILMPP(N int, t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	x := make([]big.Int, N)
+	y := make([]big.Int, N)
+
+	for i := 0; i < N; i++ {
+		x[i].SetInt64(int64(i) + 2)
+		y[i].SetInt64(int64(i) + 2)
+	}
+	c := new(big.Int).SetUint64(27)
+	x[0].Mul(&x[0], c)
+	y[1].Mul(&y[1], c)
+
+	X := make([]big.Int, N)
+	Y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		X[i].Exp(params.G, &x[i], params.P)
+		Y[i].Exp(params.G, &y[i], params.P)
+	}
+
+	msg := make(chan []big.Int)
+
+	go func() {
+		if err := ILMPProve(params, x, y, msg); err != nil {
+			t.Errorf("%d: prover: %s", N, err)
+		}
+	}()
+
+	if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+		t.Errorf("%d: verifier:", N, err)
+	} else if !ok {
+		t.Errorf("%d: failed to verify", N)
+	}
+}
+
+func TestSILMPP(t *testing.T) {
+	for i := 2; i <= 10; i++ {
+		testSILMPP(i, t)
+	}
 }

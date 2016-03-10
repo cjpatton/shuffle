@@ -39,7 +39,9 @@ import (
 // (P-1) and G^Q is congruent to 1 mod P; that is, <G> is a cyclic subgroup of
 // Z/p of order Q.
 type KeyParameters struct {
-	P, G, Q *big.Int
+	P, G, Q   *big.Int
+	qMinusOne *big.Int
+	one       *big.Int
 }
 
 // MaxMsgBytes returns the maximum number of message that may be encrypted
@@ -64,7 +66,17 @@ func NewKeyParametersFromStrings(p, g, q string) *KeyParameters {
 	if _, ok := params.Q.SetString(q, 16); !ok {
 		return nil
 	}
+	params.one = new(big.Int)
+	params.one.SetUint64(1)
+	params.qMinusOne = new(big.Int)
+	params.qMinusOne.Sub(params.Q, params.one)
 	return params
+}
+
+// PublicKey stores the public key Y = G^X for Diffie-Hellman or ElGamal.
+type PublicKey struct {
+	KeyParameters
+	Y *big.Int
 }
 
 // SecretKey stores the secret key X \in [1..Q-1] for Diffie_hellman or ElGamal.
@@ -74,29 +86,20 @@ type SecretKey struct {
 	X       *big.Int
 }
 
-// PublicKey stores the public key Y = G^X for Diffie-Hellman or ElGamal.
-type PublicKey struct {
-	KeyParameters
-	qMinusOne, one *big.Int
-	Y              *big.Int
-}
-
 // GenerateKeys chooses a random exponent and returns a secret/public key pair.
 func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 	var err error
 	sk = new(SecretKey)
 	pk = new(PublicKey)
-	pk.one = new(big.Int)
-	pk.one.SetUint64(1)
-	pk.qMinusOne = new(big.Int)
-	pk.qMinusOne.Sub(params.Q, pk.one)
+	sk.KeyParameters = *params
+	pk.KeyParameters = *params
 
 	// Choose a random secret key X.
 	sk.P = params.P
 	sk.G = params.G
 	sk.Q = params.Q
 	// Choose a random exponent in [0,Q-1).
-	if sk.X, err = pk.Sample(); err != nil {
+	if sk.X, err = pk.KeyParameters.Sample(); err != nil {
 		return nil, nil
 	}
 	sk.qMinusX = new(big.Int)
@@ -112,14 +115,14 @@ func (params *KeyParameters) GenerateKeys() (pk *PublicKey, sk *SecretKey) {
 }
 
 // Sample samples a random value from [1..q-1.]
-func (pk *PublicKey) Sample() (*big.Int, error) {
+func (params *KeyParameters) Sample() (*big.Int, error) {
 	// Choose a random exponent in [0,Q-1).
-	R, err := rand.Int(rand.Reader, pk.qMinusOne)
+	R, err := rand.Int(rand.Reader, params.qMinusOne)
 	if err != nil {
 		return nil, err
 	}
 	// Add 1 so that the exponent is in [1,Q-1].
-	R.Add(R, pk.one)
+	R.Add(R, params.one)
 	return R, nil
 }
 
