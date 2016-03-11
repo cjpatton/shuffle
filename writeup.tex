@@ -466,12 +466,22 @@ for \textsc{Shuffle}.
       f_{2,n})$ to $P$.
 
     \vspace{4pt}
-    \item[P2.] For every $j \in [2]$ and $i \in [n]$, let $\alpha = d \cdot
-      f_{j,\pi^{-1}(i)} \cdot e_{j,\pi^{-1}(i)}$ and $F_{j,i} = g^\alpha$.
+    \item[P2.] For every $j \in [2]$ and $i \in [n]$, let $\alpha_{j,i} = d \cdot
+      f_{j,\pi^{-1}(i)} \cdot e_{j,\pi^{-1}(i)}$,  and $F_{j,i} = g^{\alpha_{j,i}}$.
       Send $F_{1,1}, \dots,  F_{1,n}$ and $F_{2,1}, \dots, F_{2,n}$ to $V$.
 
     \vspace{4pt}
     \item[V2.] Let $\gamma \getsr [q-1]$. Send $\gamma$ to $P$.
+
+    \item[P3.] For every $i \in [n]$, let $\beta_{j,i} = f_{j,i} \cdot e_{j,i}$,
+      $U_i = g^{\beta_{1,i} + \gamma \beta_{2,i}}$ and
+      $V_i = g^{\alpha_{1,i} + \gamma \alpha_{2,i}}$.
+      Run
+      \[
+        \textsc{Shuffle0}_{\brackets{P,V}}\big( (U_1, \dots, U_n), (V_1, \dots,
+        V_n), g, D \big)
+      \]
+      
   \end{enumerate}
   }
   \caption{The general $n$-shuffle, an interactive proof system for
