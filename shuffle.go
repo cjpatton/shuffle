@@ -124,10 +124,14 @@ func (params *KeyParameters) ILMPProve(x, y []big.Int, msg chan []big.Int) error
 	r := make([]big.Int, N-1)
 	num := new(big.Int).SetUint64(1)
 	den := new(big.Int).SetUint64(1)
+
+	var z, q, inv big.Int
 	for i := N - 2; i >= 0; i-- {
 		num.Mul(num, &y[i+1])
 		den.Mul(den, &x[i+1])
-		r[i].Div(num, den)
+		//r[i].Div(num, den)
+		z.GCD(&inv, &q, den, params.Q)
+		r[i].Mul(num, &inv)
 		r[i].Mul(&r[i], &gamma[0])
 		r[i].Mod(&r[i], params.Q)
 		if (N-i-1)%2 == 1 {

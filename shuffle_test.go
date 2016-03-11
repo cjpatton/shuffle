@@ -82,8 +82,8 @@ func TestSILMPP(t *testing.T) {
 
 		//c, _ := params.Sample()
 		c := new(big.Int).SetUint64(2)
-		x[0].Add(&x[0], c)
-		y[N-1].Add(&y[N-1], c)
+		x[0].Mul(&x[0], c)
+		y[N-1].Mul(&y[N-1], c)
 
 		X := make([]big.Int, N)
 		Y := make([]big.Int, N)
@@ -215,7 +215,7 @@ func TestShuffle0ProveVerify(t *testing.T) {
 
 	//c, _ := params.Sample()
 	c := new(big.Int).SetUint64(33)
-	d := new(big.Int).SetUint64(2)
+	d := new(big.Int).SetUint64(11)
 	C := new(big.Int).Exp(params.G, c, params.P)
 	D := new(big.Int).Exp(params.G, d, params.P)
 
