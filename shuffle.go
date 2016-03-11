@@ -84,7 +84,7 @@ func GeneratePerm(n int) []int {
 //
 // Communication is implemented using a Go channel. As such, it should be very
 // easy to overlay this code on a network connection.
-func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error {
+func (params *KeyParameters) ILMPProve(x, y []big.Int, msg chan []big.Int) error {
 	if len(x) != len(y) {
 		msg <- nil
 		return errors.New("input lengths do not match")
@@ -142,7 +142,7 @@ func ILMPProve(params *KeyParameters, x, y []big.Int, msg chan []big.Int) error 
 
 // ILMPVerify implements the verifier role in the interactive proof for ILMP.
 // It takes as input the public sequences X and Y.
-func ILMPVerify(params *KeyParameters, X, Y []big.Int, msg chan []big.Int) (bool, error) {
+func (params *KeyParameters) ILMPVerify(X, Y []big.Int, msg chan []big.Int) (bool, error) {
 	var err error
 
 	if len(X) != len(Y) {
@@ -210,5 +210,97 @@ func ILMPVerify(params *KeyParameters, X, Y []big.Int, msg chan []big.Int) (bool
 	if L.Cmp(&R) != 0 {
 		return false, nil
 	}
+	return true, nil
+}
+
+func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg chan []big.Int) error {
+
+	if len(x) != len(y) {
+		msg <- nil
+		return errors.New("input lengths do not match")
+	}
+	N := len(x)
+
+	// V1
+	gamma := <-msg
+	if gamma == nil {
+		return errors.New("channel closed by peer (V1)")
+	}
+	t := &gamma[0]
+
+	// P1
+	phi := make([]big.Int, 2*N)
+	psi := make([]big.Int, 2*N)
+	dt := new(big.Int).Mul(d, t)
+	ct := new(big.Int).Mul(c, t)
+
+	for i := 0; i < N; i++ {
+		phi[i].Sub(&x[i], dt)
+		phi[i].Mod(&phi[i], params.Q)
+		phi[N+i] = *c
+		psi[i].Sub(&y[i], ct)
+		psi[i].Mod(&psi[i], params.Q)
+		psi[N+i] = *d
+	}
+
+	//fella := new(big.Int)
+	//for i := 0; i < N; i++ {
+	//	fella.Exp(params.G, &phi[i], params.G)
+	//	fmt.Println("fella", fella)
+	//}
+
+	if err := params.ILMPProve(phi, psi, msg); err != nil {
+		return errors.New(fmt.Sprintf("ilmp: %v", err))
+	}
+
+	return nil
+}
+
+func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg chan []big.Int) (bool, error) {
+
+	if len(X) != len(Y) {
+		msg <- nil
+		return false, errors.New("input lengths do not match")
+	}
+	N := len(X)
+
+	// V1
+	t, err := params.Sample()
+	if err != nil {
+		msg <- nil
+		return false, err
+	}
+	gamma := make([]big.Int, 1)
+	gamma[0] = *t
+	msg <- gamma
+
+	// P1
+	U := new(big.Int).Exp(D, t, params.P)
+	W := new(big.Int).Exp(C, t, params.P)
+	var Uinv, Winv, Q, Z big.Int
+	Z.GCD(&Uinv, &Q, U, params.P)
+	Z.GCD(&Winv, &Q, W, params.P)
+
+	Phi := make([]big.Int, 2*N)
+	Psi := make([]big.Int, 2*N)
+	for i := 0; i < N; i++ {
+		Phi[i].Mul(&X[i], &Uinv)
+		Phi[i].Mod(&Phi[i], params.P)
+		Phi[N+i] = *C
+		Psi[i].Mul(&Y[i], &Winv)
+		Psi[i].Mod(&Psi[i], params.P)
+		Psi[N+i] = *D
+	}
+
+	//for i := 0; i < N; i++ {
+	//	fmt.Println("guy  ", &Phi[i])
+	//}
+
+	if ok, err := params.ILMPVerify(Phi, Psi, msg); err != nil {
+		return false, errors.New(fmt.Sprintf("ilmp: %s", err))
+	} else if !ok {
+		return false, errors.New("ilmp: verification failed (P1)")
+	}
+
 	return true, nil
 }

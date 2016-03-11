@@ -379,7 +379,7 @@ equation~(\ref{eq-ilmp-completeness}) is non-singular. This implies there exists
 a unique solution $(r_1, \ldots, r_{n-1})$ satisfying this system. Neff gives
 the solution explicitly:
 \begin{equation} \label{eq-ilmp-findr}
-  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n {y_j} \cdot (q - x_j)
+  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n \frac{y_i}{x_i}
 \end{equation}
 Thus, if the prover isn't cheating, then the verifier accepts with
 probability 1.
@@ -425,13 +425,9 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
     \vspace{4pt}
     \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i / U$ and
       $\hat{Y}_i = Y_i / W$ for every $i \in [n]$. Run
-      $\textsc{Silmp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n), (C,
-      \dots, C) \big)$.
-
-    \item[P2.]
-      Run $\textsc{Silmp}_{\brackets{P,V}}\big( (\hat{Y}_1, \dots, \hat{Y}_n),
-      (D, \dots, D) \big)$.
-    \vspace{4pt}
+      \[\textsc{Silmpp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n, C,
+      \dots, C), (\hat{Y}_1, \dots, \hat{Y}_n, D, \dots, D) \big)\]
+      where the number of $C$'s and $D$'s is $n$.
   \end{enumerate}
   }
   \caption{The simple $n$-shuffle, an interactive proof system for
@@ -440,7 +436,6 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
   }
   \label{fig-shuffle0}
 \end{figure}
-
 
 \subsection{The main protocol} \label{sec-general-n-shuffle}
 Let $X_1, \dots X_n, Y_1, \dots, Y_n \in \Zmodp^*$, $k \in [q-1]$, and $K =

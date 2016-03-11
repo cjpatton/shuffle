@@ -80,9 +80,10 @@ func TestSILMPP(t *testing.T) {
 			y[i].SetInt64(int64(i) + 2)
 		}
 
-		c, _ := params.Sample()
-		x[0].Mul(&x[0], c)
-		y[N-1].Mul(&y[N-1], c)
+		//c, _ := params.Sample()
+		c := new(big.Int).SetUint64(2)
+		x[0].Add(&x[0], c)
+		y[N-1].Add(&y[N-1], c)
 
 		X := make([]big.Int, N)
 		Y := make([]big.Int, N)
@@ -94,12 +95,12 @@ func TestSILMPP(t *testing.T) {
 		msg := make(chan []big.Int)
 
 		go func() {
-			if err := ILMPProve(params, x, y, msg); err != nil {
+			if err := params.ILMPProve(x, y, msg); err != nil {
 				t.Errorf("%d: prover: %s", N, err)
 			}
 		}()
 
-		if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+		if ok, err := params.ILMPVerify(X, Y, msg); err != nil {
 			t.Errorf("%d: verifier:", N, err)
 		} else if !ok {
 			t.Errorf("%d: failed to verify", N)
@@ -149,12 +150,12 @@ func TestSILMPP2(t *testing.T) {
 	msg := make(chan []big.Int)
 
 	go func() {
-		if err := ILMPProve(params, x, y, msg); err != nil {
+		if err := params.ILMPProve(x, y, msg); err != nil {
 			t.Errorf("%d: prover: %s", N, err)
 		}
 	}()
 
-	if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+	if ok, err := params.ILMPVerify(X, Y, msg); err != nil {
 		t.Errorf("%d: verifier:", N, err)
 	} else if !ok {
 		t.Errorf("%d: failed to verify", N)
@@ -197,14 +198,54 @@ func TestBadSILMPP(t *testing.T) {
 	msg := make(chan []big.Int)
 
 	go func() {
-		if err := ILMPProve(params, x, y, msg); err != nil {
+		if err := params.ILMPProve(x, y, msg); err != nil {
 			t.Errorf("%d: prover: %s", N, err)
 		}
 	}()
 
-	if ok, err := ILMPVerify(params, X, Y, msg); err != nil {
+	if ok, err := params.ILMPVerify(X, Y, msg); err != nil {
 		t.Errorf("%d: verifier:", N, err)
 	} else if ok {
 		t.Errorf("%d: verification passed: expected failure", N)
+	}
+}
+
+func TestShuffle0ProveVerify(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	//c, _ := params.Sample()
+	c := new(big.Int).SetUint64(33)
+	d := new(big.Int).SetUint64(2)
+	C := new(big.Int).Exp(params.G, c, params.P)
+	D := new(big.Int).Exp(params.G, d, params.P)
+
+	N := 3
+	x := make([]big.Int, N)
+	y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		x[i].SetInt64(23)
+		y[i].Mul(&x[i], c)
+		x[i].Mul(&x[i], d)
+	}
+
+	X := make([]big.Int, N)
+	Y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		X[i].Exp(params.G, &x[i], params.P)
+		Y[i].Exp(params.G, &y[i], params.P)
+	}
+
+	msg := make(chan []big.Int)
+
+	go func() {
+		if err := params.Shuffle0Prove(x, y, c, d, msg); err != nil {
+			t.Errorf("prover: %s", err)
+		}
+	}()
+
+	if ok, err := params.Shuffle0Verify(X, Y, C, D, msg); err != nil {
+		t.Errorf("verifier: %s", err)
+	} else if !ok {
+		t.Errorf("failed to verify", N)
 	}
 }
