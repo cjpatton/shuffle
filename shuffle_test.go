@@ -34,7 +34,7 @@ import (
 	"testing"
 )
 
-func TestShuffle(t *testing.T) {
+func TestMix(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 	pk, sk := params.GenerateKeys()
 
@@ -53,7 +53,7 @@ func TestShuffle(t *testing.T) {
 
 	perm := GeneratePerm(n)
 	t.Log(perm)
-	M, err := sk.Shuffle(R, C, perm)
+	M, err := sk.Mix(R, C, perm)
 	if err != nil {
 		t.Fatal("M, err := Shuffle(R, C, perm); err:", err)
 	}
@@ -183,6 +183,7 @@ func TestBadSILMPP(t *testing.T) {
 	x[7].Mul(&x[7], d)
 	x[2].Mul(&x[2], e)
 	x[0].Mul(&x[0], f)
+	// Missing c ... bad!!
 	y[9].Mul(&y[9], d)
 	y[2].Mul(&y[2], e)
 	y[5].Mul(&y[5], f)

@@ -26,6 +26,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+// TODO(cjpatton) implement the general k-shuffle.
+// TODO(cjpatton) Modify Mix() to also output the shared secrets.
+
 package shuffle
 
 import (
@@ -37,7 +40,7 @@ import (
 
 // Decrypts the sequence of ElGamal ciphertexts {(R[i], C[i])}, applies the
 // specified permutation, and outputs the resulting sequence.
-func (sk *SecretKey) Shuffle(R, C []*big.Int, perm []int) ([]*big.Int, error) {
+func (sk *SecretKey) Mix(R, C []*big.Int, perm []int) ([]*big.Int, error) {
 	if len(R) != len(C) {
 		return nil, errors.New(fmt.Sprintf(
 			"sequence length mismatch: |R|=%d, |C|=%d", len(R), len(C)))
@@ -217,7 +220,7 @@ func (params *KeyParameters) ILMPVerify(X, Y []big.Int, msg chan []big.Int) (boo
 }
 
 // Shuffle0Prove implements the prover role for the interactive proof of
-// Shuffle0.
+// Shuffle0 (the simple k-shuffle).
 func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg chan []big.Int) error {
 	if len(x) != len(y) {
 		msg <- nil
@@ -255,7 +258,7 @@ func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg ch
 }
 
 // Shuffle0Verify implements the verifier role in the interactive proof of
-// Shuffle0.
+// Shuffle0 (the simple k-shuffle).
 func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg chan []big.Int) (bool, error) {
 
 	if len(X) != len(Y) {
