@@ -209,6 +209,7 @@ func TestBadSILMPP(t *testing.T) {
 	}
 }
 
+// Test the Shuffle0 protocol.
 func TestShuffle0ProveVerify(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 

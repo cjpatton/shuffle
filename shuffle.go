@@ -216,8 +216,9 @@ func (params *KeyParameters) ILMPVerify(X, Y []big.Int, msg chan []big.Int) (boo
 	return true, nil
 }
 
+// Shuffle0Prove implements the prover role for the interactive proof of
+// Shuffle0.
 func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg chan []big.Int) error {
-
 	if len(x) != len(y) {
 		msg <- nil
 		return errors.New("input lengths do not match")
@@ -253,6 +254,8 @@ func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg ch
 	return nil
 }
 
+// Shuffle0Verify implements the verifier role in the interactive proof of
+// Shuffle0.
 func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg chan []big.Int) (bool, error) {
 
 	if len(X) != len(Y) {

@@ -176,6 +176,7 @@ $p(\cdot)$ and sufficiently large $n$, $\Delta(n) < \frac{1}{p(n)}$.
 
 Fix a prime number $p$ and let $\Zmodp$ denote the modular ring of order $p$.
 In what follows, we assume arithmetic is performed in the modular ring $\Zmodp$.
+Let $\Zmodp^*$ denote the corresponding multiplicative group.
 Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
 \Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
 \textit{public parameters}. The \textit{secret key} is chosen uniformly from
@@ -379,10 +380,11 @@ equation~(\ref{eq-ilmp-completeness}) is non-singular. This implies there exists
 a unique solution $(r_1, \ldots, r_{n-1})$ satisfying this system. Neff gives
 the solution explicitly:
 \begin{equation} \label{eq-ilmp-findr}
-  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n \frac{y_i}{x_i}
+  r_i - \theta_i = (-1)^{(n-i-1)} \gamma \prod_{j=i+1}^n {y_i}{x_i}^{-1}
 \end{equation}
-Thus, if the prover isn't cheating, then the verifier accepts with
-probability 1.
+(The inverse of $x_i$ is computed in the group $\Zmodq^*$. This is
+found using Euclid's algorithm.) Thus, if the prover isn't cheating, then the
+verifier accepts with probability 1.
 
 \heading{Soundness.}
 Suppose the prover is cheating and $g^{x_1 \cdots x_n} \ne g^{y_1 \cdots y_n}$.
@@ -401,7 +403,7 @@ $M^*$ such that
 is negligible. To prove this claim, one would argue the contrapositive: suppose
 there exists adversary $\advD$ such that for every simulator $M^*$, its
 advantage in distinguishing the distribution $\brackets{P,V}(x)$ and $M^*(x)$ is
-non-negligible. There exists an adversary $\advA$ whose advantage in the DDH
+non-negligible. Then there exists an adversary $\advA$ whose advantage in the DDH
 game outlined in section~\ref{sec-ddh} is non-negligible. We omit the details of
 the proof here, but this can be shown via a concrete reduction from $\advA$ to
 $\advD$.
@@ -420,11 +422,11 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
   \begin{enumerate}
     \vspace{4pt}
     \item[V1.] Let $t \getsr [q-1]$, $U = D^t$, and $W = C^t$. Let $\hat{X}_i =
-      X_i / U$ and $\hat{Y}_i = Y_i / W$ for every $i \in [n]$. Send $t$ to $P$.
+      X_i U^{-1}$ and $\hat{Y}_i = Y_i W^{-1}$ for every $i \in [n]$. Send $t$ to $P$.
 
     \vspace{4pt}
-    \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i / U$ and
-      $\hat{Y}_i = Y_i / W$ for every $i \in [n]$. Run
+    \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i U^{-1}$ and
+      $\hat{Y}_i = Y_i W^{-1}$ for every $i \in [n]$. Run
       \[\textsc{Silmpp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n, C,
       \dots, C), (\hat{Y}_1, \dots, \hat{Y}_n, D, \dots, D) \big)\]
       where the number of $C$'s and $D$'s is $n$.
@@ -432,7 +434,7 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
   }
   \caption{The simple $n$-shuffle, an interactive proof system for
     $\textsf{Shuffle0}$. The prover knows $x_1, \ldots x_n$ and $y_1, \ldots,
-    y_n$, $c$, and $d$.
+    y_n$, $c$, and $d$. (Here, inverse is computed in $\Zmodp^*$.)
   }
   \label{fig-shuffle0}
 \end{figure}
