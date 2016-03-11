@@ -295,7 +295,7 @@ func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg c
 	if ok, err := params.ILMPVerify(Phi, Psi, msg); err != nil {
 		return false, errors.New(fmt.Sprintf("ilmp: %s", err))
 	} else if !ok {
-		return false, errors.New("ilmp: verification failed (P1)")
+		return false, nil
 	}
 
 	return true, nil

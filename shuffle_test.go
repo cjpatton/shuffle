@@ -218,11 +218,12 @@ func TestShuffle0ProveVerify(t *testing.T) {
 	C := new(big.Int).Exp(params.G, c, params.P)
 	D := new(big.Int).Exp(params.G, d, params.P)
 
-	N := 10
+	N := 20
 	x := make([]big.Int, N)
 	y := make([]big.Int, N)
 	for i := 0; i < N; i++ {
-		x[i].SetInt64(int64(i + 23))
+		t, _ := params.Sample()
+		x[i] = *t
 	}
 
 	pi := GeneratePerm(N)
@@ -251,5 +252,51 @@ func TestShuffle0ProveVerify(t *testing.T) {
 		t.Errorf("verifier: %s", err)
 	} else if !ok {
 		t.Errorf("failed to verify", N)
+	}
+}
+
+func TestBadShuffle0ProveVerify(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+
+	c, _ := params.Sample()
+	d, _ := params.Sample()
+	C := new(big.Int).Exp(params.G, c, params.P)
+	D := new(big.Int).Exp(params.G, d, params.P)
+
+	N := 2
+	x := make([]big.Int, N)
+	y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		t, _ := params.Sample()
+		x[i] = *t
+	}
+
+	pi := GeneratePerm(N)
+	for i := 0; i < N; i++ {
+		y[i].Set(&x[pi[i]])
+	}
+	y[0].SetUint64(1337) // Bad!!
+
+	X := make([]big.Int, N)
+	Y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		y[i].Mul(&y[i], c)
+		x[i].Mul(&x[i], d)
+		X[i].Exp(params.G, &x[i], params.P)
+		Y[i].Exp(params.G, &y[i], params.P)
+	}
+
+	msg := make(chan []big.Int)
+
+	go func() {
+		if err := params.Shuffle0Prove(x, y, c, d, msg); err != nil {
+			t.Errorf("prover: %s", err)
+		}
+	}()
+
+	if ok, err := params.Shuffle0Verify(X, Y, C, D, msg); err != nil {
+		t.Errorf("verifier: %s", err)
+	} else if ok {
+		t.Errorf("verification succeeded, expected failure")
 	}
 }
