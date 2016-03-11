@@ -405,7 +405,7 @@ there exists adversary $\advD$ such that for every simulator $M^*$, its
 advantage in distinguishing the distribution $\brackets{P,V}(x)$ and $M^*(x)$ is
 non-negligible. Then there exists an adversary $\advA$ whose advantage in the DDH
 game outlined in section~\ref{sec-ddh} is non-negligible. We omit the details of
-the proof here, but this can be shown via a concrete reduction from $\advA$ to
+the proof here, but claim this can be shown via a reduction from $\advA$ to
 $\advD$.
 
 \subsection{Simple $n$-shuffle} \label{sec-simple-n-shuffle}
@@ -422,11 +422,11 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
   \begin{enumerate}
     \vspace{4pt}
     \item[V1.] Let $t \getsr [q-1]$, $U = D^t$, and $W = C^t$. Let $\hat{X}_i =
-      X_i U^{-1}$ and $\hat{Y}_i = Y_i W^{-1}$ for every $i \in [n]$. Send $t$ to $P$.
+      X_i \cdot U^{-1}$ and $\hat{Y}_i = Y_i \cdot W^{-1}$ for every $i \in [n]$. Send $t$ to $P$.
 
     \vspace{4pt}
-    \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i U^{-1}$ and
-      $\hat{Y}_i = Y_i W^{-1}$ for every $i \in [n]$. Run
+    \item[P1.] Let $U = g^{dt}$ and $W = g^{ct}$. Let $\hat{X}_i = X_i \cdot U^{-1}$ and
+      $\hat{Y}_i = Y_i \cdot W^{-1}$ for every $i \in [n]$. Run
       \[\textsc{Silmpp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n, C,
       \dots, C), (\hat{Y}_1, \dots, \hat{Y}_n, D, \dots, D) \big)\]
       where the number of $C$'s and $D$'s is $n$.
@@ -440,6 +440,9 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
 \end{figure}
 
 \subsection{The main protocol} \label{sec-general-n-shuffle}
+The simple $n$-shuffle is \emph{almost} what we need; its only limitation is
+that it is required that the prover knows the log of each $X_i$ and $Y_i$. The
+general $n$-shuffle, outlined in this section, overcomes this deficiency.
 Let $X_1, \dots X_n, Y_1, \dots, Y_n \in \Zmodp^*$, $k \in [q-1]$, and $K =
 g^k$. We say $(Y_1, \dots, Y_n)$ is a shuffling of $(X_1, \dots X_n)$ if there
 exists a permutation $\pi : [n] \to [n]$ such that for every $i \in [n]$, it
@@ -447,6 +450,36 @@ holds that $Y_i = X_{\pi(i)}^k$. We say $x \in \textsc{Shuffle}$ if $x$ is an
 an encoding of $X_1, \dots X_n, Y_1, \dots, Y_n$, and $K$ where $Y_1, \dots Y_n$ is a
 shuffling of $X_1, \dots, X_n$. The following protocol is an interactive proof
 for \textsc{Shuffle}.
+\begin{figure}[h]
+  \oneCol{0.80}{
+  \underline{$\textsc{Shuffle}_{\brackets{P,V}}\big( (X_1, \cdots, X_n), (Y_1,\dots,  Y_n), K\big)$}:
+  \begin{enumerate}
+    \vspace{4pt}
+    \item[P1.] Let $e_{1,1}, \dots, e_{1,n}, e_{2,1}, \dots, e_{2,n}, d \getsr
+      [q-1]$. For each $i \in [n]$, let $E_{1,i} = g^{e_{1,i}}$, $E_{2,i} =
+      g^{e_{2,i}}$, and $D = g^d$. Send $(E_{1,1}, \dots E_{1,n})$, $(E_{2,1}, \dots
+      E_{2,n})$, and $D$ to $V$.
+
+    \vspace{4pt}
+    \item[V1.] Let $f_{1,1}, \dots, f_{1,n}, f_{2,1}, \dots, f_{2,n} \getsr
+      [q-1]$ and send $(f_{1,1}, \dots f_{1,n})$ and $(f_{2,1}, \dots
+      f_{2,n})$ to $P$.
+
+    \vspace{4pt}
+    \item[P2.] For every $j \in [2]$ and $i \in [n]$, let $\alpha = d \cdot
+      f_{j,\pi^{-1}(i)} \cdot e_{j,\pi^{-1}(i)}$ and $F_{j,i} = g^\alpha$.
+      Send $F_{1,1}, \dots,  F_{1,n}$ and $F_{2,1}, \dots, F_{2,n}$ to $V$.
+
+    \vspace{4pt}
+    \item[V2.] Let $\gamma \getsr [q-1]$. Send $\gamma$ to $P$.
+  \end{enumerate}
+  }
+  \caption{The general $n$-shuffle, an interactive proof system for
+    $\textsf{Shuffle}$. The prover knows the secret key  $k$ and the permuation
+    $\pi$.
+  }
+  \label{fig-shuffle0}
+\end{figure}
 
 \begin{thebibliography}{99}
 
