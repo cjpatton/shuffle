@@ -129,7 +129,6 @@ func (params *KeyParameters) ILMPProve(x, y []big.Int, msg chan []big.Int) error
 	for i := N - 2; i >= 0; i-- {
 		num.Mul(num, &y[i+1])
 		den.Mul(den, &x[i+1])
-		//r[i].Div(num, den)
 		z.GCD(&inv, &q, den, params.Q)
 		r[i].Mul(num, &inv)
 		r[i].Mul(&r[i], &gamma[0])
@@ -247,12 +246,6 @@ func (params *KeyParameters) Shuffle0Prove(x, y []big.Int, c, d *big.Int, msg ch
 		psi[N+i] = *d
 	}
 
-	//fella := new(big.Int)
-	//for i := 0; i < N; i++ {
-	//	fella.Exp(params.G, &phi[i], params.G)
-	//	fmt.Println("fella", fella)
-	//}
-
 	if err := params.ILMPProve(phi, psi, msg); err != nil {
 		return errors.New(fmt.Sprintf("ilmp: %v", err))
 	}
@@ -295,10 +288,6 @@ func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg c
 		Psi[i].Mod(&Psi[i], params.P)
 		Psi[N+i] = *D
 	}
-
-	//for i := 0; i < N; i++ {
-	//	fmt.Println("guy  ", &Phi[i])
-	//}
 
 	if ok, err := params.ILMPVerify(Phi, Psi, msg); err != nil {
 		return false, errors.New(fmt.Sprintf("ilmp: %s", err))

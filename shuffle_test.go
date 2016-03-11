@@ -80,8 +80,7 @@ func TestSILMPP(t *testing.T) {
 			y[i].SetInt64(int64(i) + 2)
 		}
 
-		//c, _ := params.Sample()
-		c := new(big.Int).SetUint64(2)
+		c, _ := params.Sample()
 		x[0].Mul(&x[0], c)
 		y[N-1].Mul(&y[N-1], c)
 
@@ -213,24 +212,28 @@ func TestBadSILMPP(t *testing.T) {
 func TestShuffle0ProveVerify(t *testing.T) {
 	params := NewKeyParametersFromStrings(testP, testG, testQ)
 
-	//c, _ := params.Sample()
-	c := new(big.Int).SetUint64(33)
-	d := new(big.Int).SetUint64(11)
+	c, _ := params.Sample()
+	d, _ := params.Sample()
 	C := new(big.Int).Exp(params.G, c, params.P)
 	D := new(big.Int).Exp(params.G, d, params.P)
 
-	N := 3
+	N := 10
 	x := make([]big.Int, N)
 	y := make([]big.Int, N)
 	for i := 0; i < N; i++ {
-		x[i].SetInt64(23)
-		y[i].Mul(&x[i], c)
-		x[i].Mul(&x[i], d)
+		x[i].SetInt64(int64(i + 23))
+	}
+
+	pi := GeneratePerm(N)
+	for i := 0; i < N; i++ {
+		y[i].Set(&x[pi[i]])
 	}
 
 	X := make([]big.Int, N)
 	Y := make([]big.Int, N)
 	for i := 0; i < N; i++ {
+		y[i].Mul(&y[i], c)
+		x[i].Mul(&x[i], d)
 		X[i].Exp(params.G, &x[i], params.P)
 		Y[i].Exp(params.G, &y[i], params.P)
 	}
