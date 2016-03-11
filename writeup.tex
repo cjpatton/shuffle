@@ -65,6 +65,7 @@
 \newcommand{\brackets}[1]{\langle #1 \rangle}
 \newcommand{\view}{\mathsf{view}}
 \newcommand{\class}[1]{\mathbf{#1}}
+\newcommand{\Perm}{\textsf{Perm}}
 
 \newcommand{\pk}{K}
 \newcommand{\sk}{k}
@@ -84,7 +85,7 @@
 %%%%% Title. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \date{\today}
-\title{Verifying a shuffle in zero-knowledge}
+\title{Shuffling in secret without cheating}
   \author{Chris Patton}
 
 \setcounter{tocdepth}{2}
@@ -142,16 +143,15 @@ proves his protocol achieves a property known as honest verifier zero-knowledge
 faithfully executes the protocol, the mix can prove the outputs are a
 permutation of the inputs without revealing the permutation.
 
-I formulate and define security for the problem and present Neff's protocol.
-For simplicity, I limit the discussion to a mixnet with a single mix server. In
+We formulate and define security for the problem and present Neff's protocol.
+For simplicity, we limit the discussion to a mixnet with a single mix server. In
 this scenario, users encrypt their messages under the public key of the mix. The
 mix waits until it receives a full batch of ciphertexts, decrypts them under its
-private key, and shuffles the output. In section~\ref{section:prelim}, I specify
+private key, and shuffles the output. In section~\ref{section:prelim}, we specify
 ElGamal encryption, describe the DDH assumption, and sketch the HVZK notion. In
-section~\ref{section:neff-shuffle}, I present the protocol and sketch its
-security. I implement the general $n$-shuffle as described in this section in
-the Go programming language.\footnote{ Freely available at {\it
-github.com/cjpatton/shuffle}.}
+section~\ref{section:neff-shuffle}, we present the protocol and sketch its
+security. In section~\ref{sec-implementation} we discuss the details of the
+implementation.
 
 \section{Preliminaries} \label{section:prelim}
 
@@ -163,6 +163,7 @@ probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
 A(x; r)$. Let $[i..j]$ where $i \le j$ denote the set of integers from $i$ to
 $j$ inclusively.
 Let $[n] = [1..n]$.
+Let $\Perm(n)$ denote the set of permutations on vectors of length $n$.
 Let $y \getsr \brackets{P, V}(x)$ denote the probabilistic execution of
 interactive Turing machines $P$ and $V$ on common input $x$. When the protocol
 finishes, the output of $V$ is assigned to $y$.
@@ -195,10 +196,11 @@ $C = M \cdot S$.
 Output the tuple $(C, R)$.
 This is denoted $(C, R) \getsr \enc_K(M)$.
 Decryption of a ciphertext $(C, R) \in \Zmodp^* \by \Zmodp^*$ proceeds as follows:
-let $S = R^\sk$ and
+let $S = R^\sk$ ($S$ is called the \emph{shared secret}) and
 $M = C \cdot S^{-1}$.
-Output $M$.
-This is denoted $M \gets \dec_k(C, R)$.
+Normally the decryption algorithm would output just $M$, but for the purpose of
+verification, we demand that it also returns the shared secret. Thus,
+decryption is denoted $(M, S) \gets \dec_k(C, R)$.
 
 ElGamal is known to be \textit{semantically secure} under the
 decisional Diffie-Hellman assumption \cite{elgamal84,ty98}. Informally speaking, this
@@ -214,7 +216,8 @@ let $\varm_1, \ldots, \varm_n \in \Zmodp^*$ be a sequence of plaintexts.
 Let $(\varc_1, \varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by \Zmodp^*$ be a
 sequence of corresponding ElGamal ciphertexts encrypted under the public-key
 $\pk$. The mix server, who possesses the secret-key $\sk$, takes as input
-the ciphertexts and outputs a sequence $\varm_{\pi(1)}, \ldots, \varm_{\pi(n)}$
+the ciphertexts and outputs a sequence $(\varm_{\pi(1)}, S_{\pi(1)}), \ldots,
+(\varm_{\pi(n)}, S_{\pi(n)})$.
 where $\pi$ is a permutation on $[n]$.
 We remark that there is a natural extension of this scheme for mixnets with a
 cascade of servers, each possessing its own decryption key \cite{cm06}. Indeed,
@@ -280,20 +283,24 @@ $P$ (nominally the mix server) possesses the secret key $\sk$ and the verifier
 $V$ possesses the public key $\pk$. The common input of $P$ and $V$ is all of
 the messages passed through the mix server. The mix takes as input a sequence of
 ciphertexts $(\varc_1, \varr_1), \ldots, (\varc_n, \varr_n) \in \Zmodp^* \by
-\Zmodp^*$ and outputs a sequence of plaintexts $\varm_{1}, \ldots, \varm_{n} \in
-\Zmodp^*$. Let $x \in \bits^*$ denote the encoding of the input ciphertexts and
+\Zmodp^*$ and outputs a sequence of plaintexts $(\varm_{1}, S_1), \ldots,
+(\varm_{n}, S_n) \in
+\Zmodp^* \by \Zmodp^*$. Let $x \in \bits^*$ denote the encoding of the input ciphertexts and
 output plaintexts. We say $x \in L$ if and only if there exists a bijection $\pi
 : [n] \rightarrow [n] $ such that for every $i \in [n]$,
-$\varm_{\pi(i)} = \dec_k(\varc_{i}, \varr_{i})$.
+$(\varm_{\pi(i)}, S_{\pi(i)}) = \dec_k(\varc_{i}, \varr_{i})$.
 
 A trivial proof system for $L$ is one in which the prover transmits to the
 verifier its secret key and the verifier decrypts each of the ciphertexts. Of
 course, this completely exposes $\pi$. Our goal is to specify a proof system
 $(P, V)$ in which $P$ convinces $V$ of the existence of $\pi$ without revealing
 the permutation or the secret key. A proof system that is HVZK is sufficient to
-achieve this goal, assuming the DDH problem is hard.
+achieve this goal, which we present in section~\ref{sec-shuffle}. This protocol
+is built up from simpler protocols presented in sections~\ref{sec-ilmp}
+and~\ref{sec-shuffle0}. Finally, in section~\ref{sec-mix-shuffle}, we show how
+to apply the main protocol to mixnets.
 
-\subsection{The basic protocol and its security} \label{section:ilmp}
+\subsection{The basic protocol and its security} \label{sec-ilmp}
 The main building block for the protocol is a zero-knowledge proof for the
 \emph{iterated logarithmic multiplication problem} (ILMP).
 Let $n \in \N$, $x_1, \ldots, x_n \in [q-1]$, and $y_1, \ldots y_n \in [q-1]$.
@@ -339,7 +346,6 @@ The following is an interactive proof for ILMP.
   \caption{SILMP protocol, an interactive proof for ILMP. The prover $P$ knows
     $x_1, \ldots x_n$ and $y_1, \ldots, y_n$.}
 \end{figure}
-
 
 \heading{Completeness.}
 Assume that for every $i \in [n]$, it holds that $x_i \ne 0$ and $y_i \ne 0$.
@@ -408,7 +414,7 @@ game outlined in section~\ref{sec-ddh} is non-negligible. We omit the details of
 the proof here, but claim this can be shown via a reduction from $\advA$ to
 $\advD$.
 
-\subsection{Simple $n$-shuffle} \label{sec-simple-n-shuffle}
+\subsection{Simple $n$-shuffle} \label{sec-shuffle0}
 Let $n \in \N$, $x_1, \ldots, x_n \in [q-1]$, and $y_1, \ldots y_n \in [q-1]$.
 Let $X_i = g^{x_i}$ and $Y_i = g^{y_i}$ for each $i \in [n]$. Let $c, d \in
 [q-1]$, $C = g^c$, and $D = g^d$. We say that $x \in \textsc{Shuffle0}$ if $x$
@@ -430,6 +436,9 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
       \[\textsc{Silmpp}_{\brackets{P,V}}\big( (\hat{X}_1, \dots, \hat{X}_n, C,
       \dots, C), (\hat{Y}_1, \dots, \hat{Y}_n, D, \dots, D) \big)\]
       where the number of $C$'s and $D$'s is $n$.
+
+    \vspace{4pt}
+    \item[V2.] Accept if $V$ accepts in step P1.
   \end{enumerate}
   }
   \caption{The simple $n$-shuffle, an interactive proof system for
@@ -439,7 +448,7 @@ $\textsc{Shuffle0}$ is specified in figure~\ref{fig-shuffle0}.
   \label{fig-shuffle0}
 \end{figure}
 
-\subsection{The main protocol} \label{sec-general-n-shuffle}
+\subsection{General $n$-shuffle} \label{sec-shuffle}
 The simple $n$-shuffle is \emph{almost} what we need; its only limitation is
 that it is required that the prover knows the log of each $X_i$ and $Y_i$. The
 general $n$-shuffle, outlined in this section, overcomes this deficiency.
@@ -448,8 +457,8 @@ g^k$. We say $(Y_1, \dots, Y_n)$ is a shuffling of $(X_1, \dots X_n)$ if there
 exists a permutation $\pi : [n] \to [n]$ such that for every $i \in [n]$, it
 holds that $Y_i = X_{\pi(i)}^k$. We say $x \in \textsc{Shuffle}$ if $x$ is an
 an encoding of $X_1, \dots X_n, Y_1, \dots, Y_n$, and $K$ where $Y_1, \dots Y_n$ is a
-shuffling of $X_1, \dots, X_n$. The following protocol is an interactive proof
-for \textsc{Shuffle}.
+shuffling of $X_1, \dots, X_n$. The protocol in
+figure~\ref{fig-shuffle} specifies a zero-knowledge proof for \textsc{Shuffle}.
 \begin{figure}[h]
   \oneCol{0.80}{
   \underline{$\textsc{Shuffle}_{\brackets{P,V}}\big( (X_1, \cdots, X_n), (Y_1,\dots,  Y_n), K\big)$}:
@@ -473,7 +482,9 @@ for \textsc{Shuffle}.
     \vspace{4pt}
     \item[V2.] Let $\gamma \getsr [q-1]$. Send $\gamma$ to $P$.
 
-    \item[P3.] For every $i \in [n]$, let $\beta_{j,i} = f_{j,i} \cdot e_{j,i}$,
+    \vspace{4pt}
+    \item[P3.] For every $j \in [2]$ and $i \in [n]$,
+      let $\beta_{j,i} = f_{j,i} \cdot e_{j,i}$,
       $U_i = g^{\beta_{1,i} + \gamma \beta_{2,i}}$ and
       $V_i = g^{\alpha_{1,i} + \gamma \alpha_{2,i}}$.
       Run
@@ -482,21 +493,79 @@ for \textsc{Shuffle}.
         V_n), g, D \big)
       \]
 
-    \item[P4.] Stuff
+    \vspace{4pt}
+    \item[P4.]
+      Let $a_1, \dots, a_n, b_1, \dots, b_{n-1} \getsr [q-1]$ and
+      \[
+        b_n = v_n^{-1} \Big( \sum_{i=1}^{n-1} b_i v_i - d \sum_{i=1}^{n-1} a_i
+        u_i \Big)
+      \]
+      where $u_i = \log U_i$ and $v_i = \log V_i$. For every $i \in [n]$, let
+      $A_i = g^{a_i}$ and $B_i = g^{b_i}$. Send $(A_1, \dots, A_n)$ and $(B_1,
+      \dots, B_n)$ to $V$.
 
     \vspace{4pt}
     \item[V3.] Let $\lambda \getsr [q-1]$. Send $\lambda$ to $P$.
 
     \vspace{4pt}
-    \item[P5.] Stuff. Execute SILMP
+    \item[P5.] For every $i \in [n]$, let $s_i = a_i + \lambda u_i$,
+      $r_i = b_i + \lambda v_i$, $P = \prod_{i=1}^n X_i^{r_i}$, and
+      $Q = \prod_{i=1}^n Y_i^{s_i}$. Send $P$ and $Q$ to $V$.
+
+    \vspace{4pt}
+    \item[P6.] Run $\textsc{Silmpp}_{\brackets{P,V}}\big( (P,Q), (D,K) \big)$
+
+    \vspace{4pt}
+    \item[V4.] Accept if $V$ accepts in steps P3 and P6 and for every $i \in N$,
+      $g^{s_i} = A_i \cdot U_i^\lambda$ and
+      $g^{r_i} = B_i \cdot V_i^\lambda$.
+
   \end{enumerate}
   }
   \caption{The general $n$-shuffle, an interactive proof system for
     $\textsf{Shuffle}$. The prover knows the secret key  $k$ and the permuation
     $\pi$.
   }
-  \label{fig-shuffle0}
+  \label{fig-shuffle}
 \end{figure}
+
+\subsection{Applying the protocol to mixnets} \label{sec-mix-shuffle}
+Consider the following algorithm for a mixnet constructed from the ElGamal
+encryption scheme:
+\newcommand{\ind}{\hspace{12pt}}
+\begin{tabbing}
+  \underline{Algorithm $\textsc{Mix}_k\big( (C_i, R_i)_{i=1}^n \big)$}\\[4pt]
+  \ind $\pi \getsr \Perm(n)$\\
+  \ind For $i \gets 1$ to $n$ do \\
+  \ind\ind $(M_i, S_i) \gets \dec_k(C_{\pi(i)}, R_{\pi(i)})$ \\
+  \ind Return $(M_i, S_i)_{i=1}^n$
+\end{tabbing}
+Let $K = g^k$ denote the corresponding public key.
+For every $i \in [n]$, we have that $S_i = R_{\pi(i)}^k$ and $M_i = C_{\pi(i)}
+\cdot S_i^{-1}$. To prove that the mix didn't cheat, that is $C_{i}$ is the ciphertext
+corresponding to the message $M_{\pi(i)}$, it suffices to prove $S_i =
+R_{\pi(i)}^k$. This is nothing more than an instance of $\textsc{Shuffle}$. The
+output of the mix can be verified by running
+$\textsc{Shuffle}_{\brackets{P,V}}\big( (R_1, \dots, R_n), (S_1, \dots, S_n), K
+\big)$.
+
+\section{Implementation} \label{sec-implementation}
+I implemented the simple $n$-shuffle of section~\ref{sec-shuffle0} in Go. The
+code is available online at \textit{github.com/cjpatton/shuffle}. I wrote
+a pair of functions \texttt{Shuffle0Prove} and \texttt{Shuffle0Verify}, which
+implement the prover and verifier roles of the $\textsc{Shuffle0}$ proof
+respectively. They use a standard Go channel for communication. This makes it
+convenient to adapt the code for a real-world application using a network socket
+for example.
+
+My goal for this project was to implement the general $n$-shuffle and adapt it
+for the mixnet setting; I skipped it because of time constraints. Coding this
+algorithm ended up being technically difficult. In particular, there were a
+number of details about the computations left implicit in the paper that I had
+to figure out. For example, the system of equations in equation~(\ref{eq-ilmp})
+in my implementation differ slightly from those presented in the paper, so I
+ended up doing some math-hacking to get it to work. Once I got \textsc{Silmpp}
+straightened out, implementing \textsc{Shuffle0} was pretty straight-forward.
 
 \begin{thebibliography}{99}
 
