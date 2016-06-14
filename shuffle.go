@@ -303,3 +303,83 @@ func (params *KeyParameters) Shuffle0Verify(X, Y []big.Int, C, D *big.Int, msg c
 
 	return true, nil
 }
+
+func (sk *SecretKey) ShuffleProve(X, Y []big.Int, msg chan []big.Int) error {
+	if len(X) != len(Y) {
+		msg <- nil
+		return errors.New("input lengths do not match")
+	}
+	n := len(X)
+
+	// P1
+	e := make([][]big.Int, 2)
+	E := make([][]big.Int, 2)
+	for i := 0; i < 2; i++ {
+		e[i] = make([]big.Int, n)
+		E[i] = make([]big.Int, n)
+		for j := 0; j < n; j++ {
+			t, err := sk.Sample()
+			if err != nil {
+				msg <- nil
+				return err
+			}
+			e[i][j] = *t
+			E[i][j].Exp(sk.G, t, sk.P)
+		}
+	}
+	d, err := sk.Sample()
+	if err != nil {
+		msg <- nil
+		return err
+	}
+	D := new(big.Int)
+	D.Exp(sk.G, d, sk.P)
+
+	out1 := make([]big.Int, 2*n+1)
+	copy(out1, E[0])
+	copy(out1[n:], E[1])
+	out1[2*n] = *D
+	msg <- out1
+
+	// V1
+	v1 := <-msg
+	if v1 == nil || len(v1) != 2*n {
+		return errors.New("malformed V1")
+	}
+	return nil
+}
+
+func (pk *PublicKey) ShuffleVerify(X, Y []big.Int, msg chan []big.Int) (bool, error) {
+	if len(X) != len(Y) {
+		msg <- nil
+		return false, errors.New("input lengths do not match")
+	}
+	n := len(X)
+
+	// P1
+	p1 := <-msg
+	if p1 == nil || len(p1) != 2*n+1 {
+		msg <- nil
+		return false, errors.New("malformed P1")
+	}
+
+	// V2
+	f := make([][]big.Int, 2)
+	for i := 0; i < 2; i++ {
+		f[i] = make([]big.Int, n)
+		for j := 0; j < n; j++ {
+			t, err := pk.Sample()
+			if err != nil {
+				msg <- nil
+				return false, err
+			}
+			f[i][j] = *t
+		}
+	}
+	v1 := make([]big.Int, 2*n)
+	copy(v1, f[0])
+	copy(v1[n:], f[1])
+	msg <- v1
+
+	return false, nil
+}

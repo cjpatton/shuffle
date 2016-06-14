@@ -118,22 +118,23 @@ recipient $P_i$ under the public key of the mixnet server (heereafter referred
 to as the ``mix'') and transmits the ciphertext.  The mix server waits until it
 receives $m \le n$ ciphertexts from $m$ distinct users.  It then decrypts each
 message and destination pair under its secret key and transmits each message to
-its intended destination. Crucially, the mix transmits the messages in a random
-order so as to hide the correspondence between senders and recipients.  As long
-as the mix is trusted and the user's ciphertexts are faithfully transmitted to
-the mix, this simple approach suffices to preserve anonymity of its
-participants.
+its intended destination. Crucially, the mix transmits the messages in an
+unpredictable order so as to hide the correspondence between senders and
+recipients.  As long as the mix is trusted and the user's ciphertexts are
+faithfully transmitted to the mix, this simple approach suffices to preserve
+anonymity of its participants.
 
 Normally we think of the mixnet being composed of a cascade of mix servers, each
 decrypting, shuffling, then transmitting to the next mix in the cascade until
 finally the last server outputs the users' messages. This is meant to distribute
 trust so that as long as the messages pass through at least one honest mix,
 anonymity is achieved. Still, the trust model here is rather strong. For
-example, the mix could send a fake message on behalf of one of the senders, or
-redirect it to a different recipient.  We consider the problem of publically
-verifying that the outputs are indeed a permutation of the inputs. Moreover, we
-require that the correspondence not be revealed. Andrew Neff describes in
-\cite{neff01} a method for proving a shuffle in zero-knowledge.
+example, the first mix could send a fake message on behalf of one of the
+senders, or the last mix could redirect a message to a different recipient.  We
+consider the problem of publicly verifying that the outputs are indeed a
+permutation of the inputs. Moreover, we require that the correspondence not be
+revealed. Andrew Neff describes in \cite{neff01} a method for proving a shuffle
+in zero-knowledge.
 
 Neff's solution is based on the ElGamal public key encryption scheme, which is
 known to be semantically secure assuming the discrete log problem (decisional
@@ -148,7 +149,7 @@ For simplicity, we limit the discussion to a mixnet with a single mix server. In
 this scenario, users encrypt their messages under the public key of the mix. The
 mix waits until it receives a full batch of ciphertexts, decrypts them under its
 private key, and shuffles the output. In section~\ref{section:prelim}, we specify
-ElGamal encryption, describe the DDH assumption, and sketch the HVZK notion. In
+ElGamal encryption, describe the DDH assumption, and define the HVZK notion. In
 section~\ref{section:neff-shuffle}, we present the protocol and sketch its
 security. In section~\ref{sec-implementation} we discuss the details of the
 implementation.
@@ -156,7 +157,7 @@ implementation.
 \section{Preliminaries} \label{section:prelim}
 
 If $X$ is a finite set, let $x \getsr X$ denote uniformly sampling an
-element $x$ from the set. Let $y \gets A(x)$ denote running $A$ on input $x$ and
+element $x$ from the set. Let $y \gets A(x)$ denote running algorithm $A$ on input $x$ and
 assigning its output to $y$. Let $y \gets A(x; r)$ denote the execution of a
 probabilistic algorithm with the sequence of coins $r \in \bits^\infty$. Let $y
 \getsr A(x)$ denote choosing $r \getsr \bits^\infty$ and executing $y \gets
@@ -181,7 +182,7 @@ Let $\Zmodp^*$ denote the corresponding multiplicative group.
 Let $g \in \Zmodp$ such that $g^q = 1$ where $q$ is prime. Then $\brackets{g} =
 \Zmodq^*$ is a subgroup of $\Zmodp^*$ and $q | (p-1)$. We call $(p, q, g)$ the
 \textit{public parameters}. The \textit{secret key} is chosen uniformly from
-the set of powers of $g$ mod $p$: let $\sk \getsr [q-1]$. Let $\pk = g^\sk$ be
+the set of powers of $g$ mod $p$. This is denoted by $\sk \getsr [q-1]$. Let $\pk = g^\sk$ be
 the \textit{public key}. Key generation is denoted $(K, k) \getsr \gen(p, q,
 g)$.
 Encryption and decryption operate on group elements.\footnote{
@@ -189,7 +190,7 @@ Public-key encryption schemes are typically defined on bit
 strings. It is easy to messages as elements of $\Zmodp^*$, but the number of
 messages that can be encoded depends on the modulus $p$.}
 Encryption of $M \in \Zmodp^*$ proceeds as follows:
-Let $r \getsr [q-1]$,
+let $r \getsr [q-1]$,
 $R = g^r$,
 $S = K^r$, and
 $C = M \cdot S$.
@@ -350,7 +351,7 @@ The following is an interactive proof for ILMP.
 \heading{Completeness.}
 Assume that for every $i \in [n]$, it holds that $x_i \ne 0$ and $y_i \ne 0$.
 (Otherwise, the verifier could see by inspection whether or not $(X_1, \ldots
-X_n),(Y_1, \ldots, Y_n)$ is in the language by inspection. If $(\exists \, i \in
+X_n),(Y_1, \ldots, Y_n)$ is in the language. If $(\exists \, i \in
 [n]) \, X_i = 1$, then $x_i = 0$ and $g^{x_1 \cdots x_n} = 1$. The same is true for
 $Y_i$.)
 Taking the log base-$g$ of both sides of equation~(\ref{eq-ilmp}) yields the

@@ -252,7 +252,7 @@ func TestShuffle0ProveVerify(t *testing.T) {
 	if ok, err := params.Shuffle0Verify(X, Y, C, D, msg); err != nil {
 		t.Errorf("verifier: %s", err)
 	} else if !ok {
-		t.Errorf("failed to verify", N)
+		t.Errorf("failed to verify")
 	}
 }
 
@@ -299,5 +299,45 @@ func TestBadShuffle0ProveVerify(t *testing.T) {
 		t.Errorf("verifier: %s", err)
 	} else if ok {
 		t.Errorf("verification succeeded, expected failure")
+	}
+}
+
+// Test the Shuffle protocol.
+func TestShuffleProveVerify(t *testing.T) {
+	params := NewKeyParametersFromStrings(testP, testG, testQ)
+	pk, sk := params.GenerateKeys()
+
+	N := 4
+	x := make([]big.Int, N)
+	y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		t, _ := params.Sample()
+		x[i] = *t
+	}
+
+	pi := GeneratePerm(N)
+	for i := 0; i < N; i++ {
+		y[i].Mul(&x[pi[i]], sk.X)
+	}
+
+	X := make([]big.Int, N)
+	Y := make([]big.Int, N)
+	for i := 0; i < N; i++ {
+		X[i].Exp(params.G, &x[i], params.P)
+		Y[i].Exp(params.G, &y[i], params.P)
+	}
+
+	msg := make(chan []big.Int)
+
+	go func() {
+		if err := sk.ShuffleProve(X, Y, msg); err != nil {
+			t.Errorf("prover: %s", err)
+		}
+	}()
+
+	if ok, err := pk.ShuffleVerify(X, Y, msg); err != nil {
+		t.Errorf("verifier: %s", err)
+	} else if !ok {
+		t.Errorf("failed to verify")
 	}
 }
